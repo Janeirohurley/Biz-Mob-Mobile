@@ -1,6 +1,5 @@
 import { useBusiness } from "@/context/BusinessContext";
 import { Ionicons } from "@expo/vector-icons";
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Tabs } from "expo-router";
 import React from "react";
 
@@ -13,18 +12,15 @@ export default function DashboardLayout() {
         headerShown: false,
         tabBarActiveTintColor: "#007AFF",
         tabBarInactiveTintColor: "#8E8E93",
-        tabBarLabelPosition: "below-icon"
-        // tabBarStyle: {
-        //   backgroundColor: "#F2F2F7",
-        //   borderTopWidth: 0,
-        //   paddingBottom: 20,
-        //   paddingTop: 8,
-        //   marginBottom: 0,
-        // },
-        // tabBarLabelStyle: {
-        //   fontSize: 10,
-        //   fontWeight: "500",
-        // },
+        tabBarLabelPosition: "below-icon",
+        tabBarStyle: {
+          backgroundColor: "#F2F2F7",
+          elevation: 0,
+        },
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontWeight: "500",
+        },
       }}
     >
       <Tabs.Screen
@@ -62,9 +58,9 @@ export default function DashboardLayout() {
             <Ionicons name="people-outline" size={size} color={color} />
           ),
           tabBarBadge: clients.length,
-          tabBarBadgeStyle:{
-            color:"white",
-            backgroundColor:"#007AFF"
+          tabBarBadgeStyle: {
+            color: "white",
+            backgroundColor: "#007AFF"
           }
         }}
       />

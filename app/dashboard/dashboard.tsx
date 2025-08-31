@@ -2,7 +2,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
 import {
-  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,8 +10,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useBusiness } from "../../context/BusinessContext";
-import Header from "@/components/header";
-
 const StatCard = ({
   title,
   value,
@@ -69,14 +66,7 @@ export default function Dashboard() {
     client.totalSpent > (top?.totalSpent || 0) ? client : top, null as any
   );
 
-  const handleReset = async () => {
-    try {
-      await resetApp();
-      Alert.alert("Success", "App reset successfully!");
-    } catch (error) {
-      Alert.alert("Error", "Failed to reset app.");
-    }
-  };
+
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -211,23 +201,6 @@ export default function Dashboard() {
             </TouchableOpacity>
           </View>
         </View>
-
-        <TouchableOpacity
-          style={styles.resetButton}
-          onPress={() => {
-            Alert.alert(
-              "Reset App",
-              "This will permanently delete all data.",
-              [
-                { text: "Cancel", style: "cancel" },
-                { text: "Reset", style: "destructive", onPress: handleReset },
-              ]
-            );
-          }}
-          activeOpacity={0.6}
-        >
-          <Text style={styles.resetText}>Reset App Data</Text>
-        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
