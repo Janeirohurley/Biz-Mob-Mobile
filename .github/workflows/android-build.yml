@@ -2,9 +2,9 @@ name: Build Android APK
 
 on:
   push:
-    branches:
-      - main
-  workflow_dispatch:  # Permet de lancer manuellement le build
+    tags:
+      - "v*"   # Crée une release quand tu push un tag comme v1.0.0
+  workflow_dispatch:
 
 jobs:
   build-android:
@@ -17,7 +17,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # 2️⃣ Installer Node.js (nécessaire pour React Native)
+      # 2️⃣ Installer Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
@@ -30,14 +30,15 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      # 4️⃣ Installer les dépendances JS
+      # 4️⃣ Installer dépendances
       - name: Install JS dependencies
         run: npm install
-      # 4.1 Prébuild + Build Android avec Expo (ton script personnalisé)
+
+      # 5️⃣ Prebuild Expo
       - name: Prebuild
         run: npm run prebuild
 
-      # 5️⃣ Installer Android SDK et Build Tools
+      # 6️⃣ Installer Android SDK
       - name: Setup Android SDK
         run: |
           sudo apt-get update
@@ -47,16 +48,32 @@ jobs:
           unzip cmdline-tools.zip -d $HOME/Android/cmdline-tools
           yes | $HOME/Android/cmdline-tools/cmdline-tools/bin/sdkmanager --sdk_root=$HOME/Android "platform-tools" "platforms;android-33" "build-tools;33.0.2"
 
-      # 6️⃣ Build APK avec Gradle
+      # 7️⃣ Build APK
       - name: Build APK
         run: |
           cd android
           chmod +x ./gradlew
           ./gradlew clean assembleRelease
 
-      # 7️⃣ Télécharger l'APK comme artifact GitHub
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
+      # 8️⃣ Créer une Release GitHub
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          name: android-apk
-          path: android/app/build/outputs/apk/release/*.apk
+          tag_name: ${{ github.ref_name }}
+          release_name: "Release ${{ github.ref_name }}"
+          draft: false
+          prerelease: false
+
+      # 9️⃣ Uploader APK dans la Release
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: android/app/build/outputs/apk/release/app-release.apk
+          asset_name: app-release.apk
+          asset_content_type: application/vnd.android.package-archive
