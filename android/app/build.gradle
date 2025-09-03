@@ -129,18 +129,10 @@ android {
         ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~'
     }
     splits {
-
-        // Configures multiple APKs based on screen density.
         density {
-
-            // Configures multiple APKs based on screen density.
-            isEnable = true
-
-            // Specifies a list of screen densities you don't want Gradle to create multiple APKs for.
-            exclude("ldpi", "xxhdpi", "xxxhdpi")
-
-            // Specifies a list of compatible screen size settings for the manifest.
-            compatibleScreens("small", "normal", "large", "xlarge")
+            enable true
+            exclude "ldpi", "xxhdpi", "xxxhdpi"
+            compatibleScreens "small", "normal", "large", "xlarge"
         }
     }
 
