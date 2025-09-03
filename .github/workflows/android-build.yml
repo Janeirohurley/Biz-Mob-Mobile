@@ -25,24 +25,20 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      # 3️⃣ Installer Android SDK et outils de build
+      # 3️⃣ Installer les outils Android nécessaires
       - name: Setup Android SDK
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 33
-          target: google_apis
-          arch: x86_64
-          force-avd-creation: false
-          emulator-options: "-no-window"
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget unzip
+          wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
+          unzip cmdline-tools.zip -d $HOME/Android
+          yes | $HOME/Android/cmdline-tools/bin/sdkmanager --sdk_root=$HOME/Android "platform-tools" "platforms;android-33" "build-tools;33.0.2"
 
       # 4️⃣ Construire l'APK avec Gradle
       - name: Build APK
         run: |
           cd android
-          # Clean pour éviter les conflits
-          ./gradlew clean
-          # Build release multi-arch
-          ./gradlew assembleRelease
+          ./gradlew clean assembleRelease
 
       # 5️⃣ Télécharger l'APK dans les Artifacts GitHub
       - name: Upload APK
