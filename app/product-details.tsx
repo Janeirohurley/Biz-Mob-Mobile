@@ -102,7 +102,7 @@ export default function ProductDetails() {
           </View>
           <View style={styles.rowWrap}>
             <Stat
-              label="Purchase Price"
+              label="Purchased"
               value={`${config?.currencySymbol || "$"}${product.purchasePrice.toLocaleString()}`}
             />
             <Stat
@@ -251,7 +251,6 @@ const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowOpacity: 0.05,
     shadowRadius: 4,
-    elevation: 1,
   },
   cardHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
   cardTitle: { marginLeft: 8, fontSize: 16, fontWeight: "600", color: "#111" },

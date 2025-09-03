@@ -4,6 +4,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  SectionList,
   StyleSheet,
   Text,
   TextInput,
@@ -27,9 +28,14 @@ const Debts: React.FC = () => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [error, setError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  // filtrer les des dettes non payee
+  const unpaidDebts = debts.filter((d) => {
+    const totalPaid = d.paymentHistory.reduce((sum, payment) => sum + payment.amount, 0);
+    return totalPaid < d.amount;
+  });
 
   // Filtrer les dettes selon la recherche
-  const filteredDebts = debts.filter((debt) => {
+  const filteredDebts = unpaidDebts.filter((debt) => {
     const client = clients.find((c) => c.id === debt.clientId);
     return client?.name.toLowerCase().includes(searchQuery.toLowerCase());
   });
@@ -108,7 +114,6 @@ const Debts: React.FC = () => {
     const sale = sales.find((s: Sale) => s.id === item.saleId);
     const paid = item.paymentHistory.reduce((sum: number, p: DebtPayment) => sum + p.amount, 0);
     const remaining = item.amount - paid;
-
     return (
       <View style={styles.formCard} key={item.id}>
         <View style={styles.cardHeader}>
@@ -218,13 +223,16 @@ const Debts: React.FC = () => {
           </View>
         ) : (
           <View style={styles.actionButtons}>
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={() => setSelectedDebt(item.id)}
-              activeOpacity={0.6}
-            >
-              <Text style={styles.addButtonText}>Add Payment</Text>
-            </TouchableOpacity>
+            {
+              remaining > 0 ? <TouchableOpacity
+                style={styles.addButton}
+                onPress={() => setSelectedDebt(item.id)}
+                activeOpacity={0.6}
+              >
+                <Text style={styles.addButtonText}>Add Payment</Text>
+              </TouchableOpacity> : <View style={styles.addButton}><Text style={styles.addButtonText}>Full Paid</Text></View>
+            }
+
             <TouchableOpacity
               style={styles.deleteButton}
               onPress={() => handleDeleteDebt(item.id, client?.name || "Unknown client")}
@@ -239,43 +247,84 @@ const Debts: React.FC = () => {
     );
   };
 
+
+  const groupDebtsByDate = (debts: Debt[]) => {
+    const groups: { [date: string]: Debt[] } = {};
+
+    debts.forEach(debt => {
+      const dateKey = new Date(debt.createdAt).toISOString().split("T")[0]; // yyyy-mm-dd
+      if (!groups[dateKey]) groups[dateKey] = [];
+      groups[dateKey].push(debt);
+    });
+
+    return Object.keys(groups)
+      .sort((a, b) => new Date(b).getTime() - new Date(a).getTime()) // dates descendantes
+      .map(dateKey => ({
+        title: new Date(dateKey).toLocaleDateString("fr-FR", {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        }),
+        data: groups[dateKey],
+      }));
+  };
+
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+      <Header title="Outstanding Debts" />
       <KeyboardAvoidingView
-        style={styles.container}
+        style={styles.content}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <Header
-          title="Outstanding Debts"
-        />
-        <ScrollView contentContainerStyle={styles.content}>
-          <View style={styles.formCard}>
-            <Text style={styles.sectionTitle}>Search by Client Name</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter client name"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholderTextColor="#8E8E93"
-            />
-          </View>
+
+        {/* 🔒 Recherche FIXE en haut */}
+        <View style={styles.formCard}>
+          <Text style={styles.sectionTitle}>Search by Client Name</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter client name"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholderTextColor="#8E8E93"
+          />
+        </View>
+
+        {/* 📋 Liste scrollable avec safe area en bas */}
+        <View style={{ flex: 1 }}>
           {filteredDebts.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Ionicons name="document-text-outline" size={48} color="#CBD5E1" />
               <Text style={styles.emptyText}>
-                {searchQuery ? "No debts found for this search" : "No debts recorded"}
+                {searchQuery
+                  ? "No debts found for this search"
+                  : "No debts recorded"}
               </Text>
               <Text style={styles.emptySubText}>
-                {searchQuery ? "Try a different search term" : "Add a sale with debt to start tracking"}
+                {searchQuery
+                  ? "Try a different search term"
+                  : "Add a sale with debt to start tracking"}
               </Text>
             </View>
           ) : (
-            filteredDebts.map((debt) => renderDebt(debt))
+            <SectionList
+              sections={groupDebtsByDate(filteredDebts)}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => renderDebt(item)}
+              renderSectionHeader={({ section: { title } }) => (
+                <Text style={styles.sectionHeader}>{title}</Text>
+              )}
+              showsVerticalScrollIndicator={false}
+              style={{ flex: 1 }}
+              contentContainerStyle={{ paddingBottom: 40 }} // Android + iOS
+              contentInset={{ bottom: 40 }} // iOS uniquement
+            />
           )}
-        </ScrollView>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
+
 };
 
 const styles = StyleSheet.create({
@@ -286,6 +335,7 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 20,
     paddingBottom: 20,
+    flex: 1,
   },
   formCard: {
     backgroundColor: "#FFFFFF",
@@ -302,6 +352,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 12,
   },
+  sectionHeader: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#1E293B",
+    marginTop: 16,
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+
   cardIcon: {
     marginRight: 12,
   },

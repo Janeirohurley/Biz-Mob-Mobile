@@ -2,6 +2,7 @@ import { useBusiness } from "@/context/BusinessContext";
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import React from "react";
+import { Platform } from "react-native";
 
 
 export default function DashboardLayout() {
@@ -16,6 +17,8 @@ export default function DashboardLayout() {
         tabBarStyle: {
           backgroundColor: "#F2F2F7",
           elevation: 0,
+          marginBottom: Platform.OS === "android" ? 16 : 0, // <-- IMPORTANT
+          height: Platform.OS === "android" ? 70 : 60,  
         },
         tabBarLabelStyle: {
           fontSize: 10,

@@ -94,6 +94,9 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0.0"
+        ndk {
+            abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
+        }
     }
     signingConfigs {
         debug {
@@ -125,6 +128,22 @@ android {
     androidResources {
         ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~'
     }
+    splits {
+
+        // Configures multiple APKs based on screen density.
+        density {
+
+            // Configures multiple APKs based on screen density.
+            isEnable = true
+
+            // Specifies a list of screen densities you don't want Gradle to create multiple APKs for.
+            exclude("ldpi", "xxhdpi", "xxxhdpi")
+
+            // Specifies a list of compatible screen size settings for the manifest.
+            compatibleScreens("small", "normal", "large", "xlarge")
+        }
+    }
+
 }
 
 // Apply static values from `gradle.properties` to the `android.packagingOptions`

@@ -1,0 +1,52 @@
+name: Build Android APK
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # Permet de lancer manuellement le build
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    env:
+      JAVA_HOME: /usr/lib/jvm/java-17-temurin
+
+    steps:
+      # 1️⃣ Récupérer le code
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # 2️⃣ Installer Java
+      - name: Setup Java 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: 17
+
+      # 3️⃣ Installer Android SDK et outils de build
+      - name: Setup Android SDK
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          target: google_apis
+          arch: x86_64
+          force-avd-creation: false
+          emulator-options: "-no-window"
+
+      # 4️⃣ Construire l'APK avec Gradle
+      - name: Build APK
+        run: |
+          cd android
+          # Clean pour éviter les conflits
+          ./gradlew clean
+          # Build release multi-arch
+          ./gradlew assembleRelease
+
+      # 5️⃣ Télécharger l'APK dans les Artifacts GitHub
+      - name: Upload APK
+        uses: actions/upload-artifact@v3
+        with:
+          name: android-apk
+          path: android/app/build/outputs/apk/release/app-release.apk

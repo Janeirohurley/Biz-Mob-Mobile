@@ -3,6 +3,7 @@ import React from "react";
 import {
   Alert,
   FlatList,
+  SectionList,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -31,6 +32,9 @@ export default function Sales() {
   const renderSale = ({ item }: { item: Sale }) => {
     const clientName = getClientName(item.clientId);
     const itemsCount = item.items.reduce((sum, saleItem) => sum + saleItem.quantity, 0);
+
+
+
 
     return (
       <TouchableOpacity style={styles.saleCard} activeOpacity={0.6} onPress={() => router.push({ pathname: "/sale-detail", params: { saleId: item.id } })}>
@@ -116,7 +120,29 @@ export default function Sales() {
   const paidSalesCount = sales.filter(s => s.paymentStatus === 'full').length;
   const unpaidSalesCount = sales.filter(s => s.paymentStatus === 'debt').length;
   const partialSalesCount = sales.filter(s => s.paymentStatus === 'partial').length;
+  // Fonction utilitaire pour grouper par date (au format yyyy-mm-dd)
+  const groupSalesByDate = (sales: Sale[]) => {
+    const groups: { [date: string]: Sale[] } = {};
 
+    sales.forEach(sale => {
+      const dateKey = new Date(sale.date).toISOString().split("T")[0]; // ex: 2025-09-03
+      if (!groups[dateKey]) groups[dateKey] = [];
+      groups[dateKey].push(sale);
+    });
+
+    // Transformer en sections
+    return Object.keys(groups)
+      .sort((a, b) => new Date(b).getTime() - new Date(a).getTime()) // dates descendantes
+      .map(dateKey => ({
+        title: new Date(dateKey).toLocaleDateString("en-US", {
+          weekday: "long",
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        }),
+        data: groups[dateKey].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+      }));
+  };
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <Header title="Sales" showBack={false} right={
@@ -157,12 +183,12 @@ export default function Sales() {
             <Text style={styles.statValue}>{sales.length}</Text>
             <Text style={styles.statLabel}>Total Sales</Text>
           </View>
-          <View style={styles.statItem}>
+          {/* <View style={styles.statItem}>
             <Text style={styles.statValue}>
               {config?.currencySymbol || "$"}{averageSale.toFixed(0)}
             </Text>
             <Text style={styles.statLabel}>Average Sale</Text>
-          </View>
+          </View> */}
           <View style={styles.statItem}>
             <Text style={[styles.statValue, { color: "#34C759" }]}>{paidSalesCount}</Text>
             <Text style={styles.statLabel}>Paid</Text>
@@ -170,6 +196,10 @@ export default function Sales() {
           <View style={styles.statItem}>
             <Text style={[styles.statValue, { color: "#FF3B30" }]}>{unpaidSalesCount}</Text>
             <Text style={styles.statLabel}>Unpaid</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={[styles.statValue, { color: "#FF9500" }]}>{partialSalesCount}</Text>
+            <Text style={styles.statLabel}>Partial</Text>
           </View>
         </View>
       </View>
@@ -181,14 +211,18 @@ export default function Sales() {
           <Text style={styles.emptyText}>Record your first sale to get started</Text>
         </View>
       ) : (
-        <FlatList
-          data={sales.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())}
-          renderItem={renderSale}
+        <SectionList
+          sections={groupSalesByDate(sales)}
           keyExtractor={(item) => item.id}
+          renderItem={renderSale}
+          renderSectionHeader={({ section: { title } }) => (
+            <Text style={styles.sectionHeader}>{title}</Text>
+          )}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
         />
       )}
+
     </SafeAreaView>
   );
 }
@@ -219,6 +253,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  sectionHeader: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#1E293B",
+    marginBottom: 8,
+    marginTop: 16,
+    marginLeft: 4,
+  },
+
   summarySection: {
     paddingHorizontal: 20,
     marginBottom: 20,

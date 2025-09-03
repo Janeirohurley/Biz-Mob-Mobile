@@ -12,14 +12,7 @@
       "distribution": "internal"
     },
     "production": {
-      "android": {
-        "buildType": "apk",         // APK léger pour test rapide
-        "gradleCommand": ":app:assembleRelease",
-      },
-      "ios": {
-        "simulator": false
-      },
-      "autoIncrement": true        // incrémente la version automatiquement
+      "autoIncrement": true
     }
   },
   "submit": {

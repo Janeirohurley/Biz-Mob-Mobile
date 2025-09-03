@@ -87,6 +87,7 @@ export interface AppConfig {
   language: 'en' | 'fr' | 'es' | 'ar'; // Langue sélectionnée
   isRTL: boolean; // Support RTL pour l'arabe
   passwordHash: string; // Hash du mot de passe pour sécurisation locale
+  lastSyncTimestamp?:string;
 }
 
 // Props des composants React pour une réutilisation modulaire

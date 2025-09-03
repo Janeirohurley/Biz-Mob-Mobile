@@ -7,6 +7,7 @@ interface SettingItemProps {
     onPress: () => void;
     color?: string;
     showChevron?: boolean;
+    disabled?: boolean;
 }
 
 export const SettingItem = ({
@@ -16,8 +17,11 @@ export const SettingItem = ({
     onPress,
     color = "#8E8E93",
     showChevron = true,
+    disabled = false
 }: SettingItemProps) => (
-    <TouchableOpacity style={styles.settingItem} onPress={onPress} activeOpacity={0.6}>
+    <TouchableOpacity style={styles.settingItem} onPress={onPress} activeOpacity={0.6} disabled={disabled
+
+    }>
         <View style={styles.settingLeft}>
             <View style={[styles.iconContainer, { backgroundColor: color }]}>
                 <Ionicons name={icon} size={18} color="#FFFFFF" />

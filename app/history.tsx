@@ -2,12 +2,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-    FlatList,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  FlatList,
+  Platform,
+  SectionList,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useBusiness } from "../context/BusinessContext";
@@ -100,9 +102,9 @@ export default function History() {
         subtitle: log.description,
         date: log.timestamp,
         status: log.status,
-        icon: log.eventType === 'create' ? 'add-circle' : 
-              log.eventType === 'update' ? 'create' :
-              log.eventType === 'delete' ? 'trash' : 'log-in',
+        icon: log.eventType === 'create' ? 'add-circle' :
+          log.eventType === 'update' ? 'create' :
+            log.eventType === 'delete' ? 'trash' : 'log-in',
         color: log.status === 'success' ? '#8E8E93' : '#FF3B30'
       });
     });
@@ -114,16 +116,16 @@ export default function History() {
 
   // Filtrer les éléments
   const filteredItems = historyItems.filter(item => {
-    const matchesFilter = selectedFilter === 'all' || 
-                         (selectedFilter === 'sales' && item.type === 'sale') ||
-                         (selectedFilter === 'purchases' && item.type === 'purchase') ||
-                         (selectedFilter === 'payments' && item.type === 'payment') ||
-                         (selectedFilter === 'audit' && item.type === 'audit');
-    
-    const matchesSearch = searchQuery === '' || 
-                         item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         item.subtitle.toLowerCase().includes(searchQuery.toLowerCase());
-    
+    const matchesFilter = selectedFilter === 'all' ||
+      (selectedFilter === 'sales' && item.type === 'sale') ||
+      (selectedFilter === 'purchases' && item.type === 'purchase') ||
+      (selectedFilter === 'payments' && item.type === 'payment') ||
+      (selectedFilter === 'audit' && item.type === 'audit');
+
+    const matchesSearch = searchQuery === '' ||
+      item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.subtitle.toLowerCase().includes(searchQuery.toLowerCase());
+
     return matchesFilter && matchesSearch;
   });
 
@@ -136,8 +138,8 @@ export default function History() {
         <View style={styles.itemHeader}>
           <Text style={styles.itemTitle}>{item.title}</Text>
           <Text style={styles.itemDate}>
-            {new Date(item.date).toLocaleDateString('en-US', { 
-              month: 'short', 
+            {new Date(item.date).toLocaleDateString('en-US', {
+              month: 'short',
               day: 'numeric',
               hour: '2-digit',
               minute: '2-digit'
@@ -152,22 +154,22 @@ export default function History() {
             </Text>
           )}
           {item.status && (
-            <View style={[styles.statusBadge, 
-              item.status === 'success' && styles.successBadge,
-              item.status === 'failure' && styles.failureBadge,
-              item.status === 'full' && styles.paidBadge,
-              item.status === 'debt' && styles.debtBadge,
-              item.status === 'partial' && styles.partialBadge
+            <View style={[styles.statusBadge,
+            item.status === 'success' && styles.successBadge,
+            item.status === 'failure' && styles.failureBadge,
+            item.status === 'full' && styles.paidBadge,
+            item.status === 'debt' && styles.debtBadge,
+            item.status === 'partial' && styles.partialBadge
             ]}>
               <Text style={[styles.statusText,
-                (item.status === 'success' || item.status === 'full') && styles.successText,
-                (item.status === 'failure' || item.status === 'debt') && styles.failureText,
-                item.status === 'partial' && styles.partialText
+              (item.status === 'success' || item.status === 'full') && styles.successText,
+              (item.status === 'failure' || item.status === 'debt') && styles.failureText,
+              item.status === 'partial' && styles.partialText
               ]}>
-                {item.status === 'full' ? 'Paid' : 
-                 item.status === 'debt' ? 'Unpaid' : 
-                 item.status === 'partial' ? 'Partial' :
-                 item.status}
+                {item.status === 'full' ? 'Paid' :
+                  item.status === 'debt' ? 'Unpaid' :
+                    item.status === 'partial' ? 'Partial' :
+                      item.status}
               </Text>
             </View>
           )}
@@ -175,9 +177,30 @@ export default function History() {
       </View>
     </TouchableOpacity>
   );
+  const groupHistoryByDate = (items: HistoryItem[]) => {
+    const groups: { [date: string]: HistoryItem[] } = {};
+
+    items.forEach(item => {
+      const dateKey = new Date(item.date).toISOString().split("T")[0]; // yyyy-mm-dd
+      if (!groups[dateKey]) groups[dateKey] = [];
+      groups[dateKey].push(item);
+    });
+
+    return Object.keys(groups)
+      .sort((a, b) => new Date(b).getTime() - new Date(a).getTime()) // dates descendantes
+      .map(dateKey => ({
+        title: new Date(dateKey).toLocaleDateString('fr-FR', {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric'
+        }),
+        data: groups[dateKey]
+      }));
+  };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <Header title="History" />
 
       {/* Search Bar */}
@@ -215,7 +238,7 @@ export default function History() {
         ))}
       </View>
 
-      {/* History List */}
+      {/* History List Grouped by Date */}
       {filteredItems.length === 0 ? (
         <View style={styles.emptyState}>
           <Ionicons name="time-outline" size={64} color="#CBD5E1" />
@@ -225,15 +248,23 @@ export default function History() {
           </Text>
         </View>
       ) : (
-        <FlatList
-          data={filteredItems}
-          renderItem={renderHistoryItem}
+        <SectionList
+          sections={groupHistoryByDate(filteredItems)}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.list}
+          renderItem={({ item }) => renderHistoryItem({ item })}
+          renderSectionHeader={({ section: { title } }) => (
+            <Text style={styles.sectionHeader}>{title}</Text>
+          )}
           showsVerticalScrollIndicator={false}
+          contentContainerStyle={{
+            paddingHorizontal: 20,
+            paddingBottom: Platform.OS === 'android' ? 40 : 20,
+          }}
         />
       )}
     </SafeAreaView>
+
+
   );
 }
 
@@ -266,6 +297,14 @@ const styles = StyleSheet.create({
   searchSection: {
     paddingHorizontal: 20,
     paddingVertical: 16,
+  },
+  sectionHeader: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#1E293B",
+    marginTop: 16,
+    marginBottom: 8,
+    marginLeft: 4,
   },
   searchBar: {
     flexDirection: "row",
@@ -306,7 +345,6 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingHorizontal: 20,
-    paddingBottom: 20,
   },
   historyItem: {
     backgroundColor: "#FFFFFF",

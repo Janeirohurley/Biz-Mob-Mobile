@@ -2,12 +2,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-    FlatList,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Platform,
+  SectionList,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useBusiness } from "../context/BusinessContext";
@@ -49,10 +50,10 @@ export default function AuditLogs() {
 
   const filteredLogs = auditLogs.filter(log => {
     const matchesFilter = selectedFilter === 'all' || log.eventType === selectedFilter;
-    const matchesSearch = searchQuery === '' || 
-                         log.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         log.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         log.entityType.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = searchQuery === '' ||
+      log.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      log.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      log.entityType.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesFilter && matchesSearch;
   }).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
@@ -67,30 +68,30 @@ export default function AuditLogs() {
             {item.eventType.charAt(0).toUpperCase() + item.eventType.slice(1)} {item.entityType}
           </Text>
           <Text style={styles.logTime}>
-            {new Date(item.timestamp).toLocaleTimeString('en-US', { 
-              hour: '2-digit', 
-              minute: '2-digit' 
+            {new Date(item.timestamp).toLocaleTimeString('en-US', {
+              hour: '2-digit',
+              minute: '2-digit'
             })}
           </Text>
         </View>
         <Text style={styles.logDescription}>{item.description}</Text>
         <View style={styles.logFooter}>
           <Text style={styles.logUser}>by {item.userName}</Text>
-          <View style={[styles.statusBadge, 
-            item.status === 'success' && styles.successBadge,
-            item.status === 'failure' && styles.failureBadge
+          <View style={[styles.statusBadge,
+          item.status === 'success' && styles.successBadge,
+          item.status === 'failure' && styles.failureBadge
           ]}>
             <Text style={[styles.statusText,
-              item.status === 'success' && styles.successText,
-              item.status === 'failure' && styles.failureText
+            item.status === 'success' && styles.successText,
+            item.status === 'failure' && styles.failureText
             ]}>
               {item.status}
             </Text>
           </View>
         </View>
         <Text style={styles.logDate}>
-          {new Date(item.timestamp).toLocaleDateString('en-US', { 
-            month: 'short', 
+          {new Date(item.timestamp).toLocaleDateString('en-US', {
+            month: 'short',
             day: 'numeric',
             year: 'numeric'
           })}
@@ -104,9 +105,32 @@ export default function AuditLogs() {
     </View>
   );
 
+  const groupAudditLogByDate = (items: AuditLog[]) => {
+    const groups: { [timestamp: string]: AuditLog[] } = {};
+
+    items.forEach(item => {
+      const dateKey = new Date(item.timestamp).toISOString().split("T")[0]; // yyyy-mm-dd
+      if (!groups[dateKey]) groups[dateKey] = [];
+      groups[dateKey].push(item);
+    });
+
+    return Object.keys(groups)
+      .sort((a, b) => new Date(b).getTime() - new Date(a).getTime()) // dates descendantes
+      .map(dateKey => ({
+        title: new Date(dateKey).toLocaleDateString('fr-FR', {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric'
+        }),
+        data: groups[dateKey]
+      }));
+  };
+
+
   return (
     <SafeAreaView style={styles.container} >
-      <Header title="Audit Logs" showBack  />
+      <Header title="Audit Logs" showBack />
       {/* Search Bar */}
       <View style={styles.searchSection}>
         <View style={styles.searchBar}>
@@ -174,14 +198,21 @@ export default function AuditLogs() {
           </Text>
         </View>
       ) : (
-        <FlatList
-          data={filteredLogs}
-          renderItem={renderLogItem}
+         <SectionList
+          sections={groupAudditLogByDate(filteredLogs)}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.list}
+          renderItem={({ item }) => renderLogItem({ item })}
+          renderSectionHeader={({ section: { title } }) => (
+            <Text style={styles.sectionHeader}>{title}</Text>
+          )}
           showsVerticalScrollIndicator={false}
+          contentContainerStyle={{
+            paddingHorizontal: 20,
+            paddingBottom: Platform.OS === 'android' ? 40 : 20,
+          }}
         />
       )}
+     
     </SafeAreaView>
   );
 }
@@ -200,6 +231,14 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
     borderBottomColor: "#E2E8F0",
+  },
+  sectionHeader: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#1E293B",
+    marginTop: 16,
+    marginBottom: 8,
+    marginLeft: 4,
   },
   backButton: {
     padding: 4,

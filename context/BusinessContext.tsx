@@ -522,6 +522,15 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                         : client
                 )
             );
+            setSales(prevSales =>
+                prevSales.map(sale =>
+                    sale.id === debt.saleId
+                        ? {
+                            ...sale,
+                            paidAmount: Math.max(0, sale.paidAmount + payment.amount),
+                            debtAmount: Math.max(0, sale.debtAmount - payment.amount),
+                            paymentStatus: payment.amount === sale.debtAmount ? "full" : sale.paymentStatus
+                        } : sale))
         }
         logAudit({
             id: generateId(),

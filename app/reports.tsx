@@ -1,5 +1,5 @@
 import React from "react";
-import { ScrollView, Text, View, StyleSheet, TouchableOpacity } from "react-native";
+import { ScrollView, Text, View, StyleSheet, TouchableOpacity, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -91,9 +91,9 @@ export default function Reports() {
   const topClients = [...clients].sort((a, b) => b.totalSpent - a.totalSpent).slice(0, 5);
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
- <Header title="Reports" />
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <Header title="Reports" />
+      <ScrollView style={[styles.content, { paddingBottom: Platform.OS === 'android' ? 40 : 20, }]} showsVerticalScrollIndicator={false}>
         {/* Summary Cards */}
         <View style={styles.summaryRow}>
           <SummaryCard value={`${config?.currencySymbol || "$"}${totalRevenue.toLocaleString()}`} label="Total Revenue" />
@@ -161,6 +161,6 @@ const styles = StyleSheet.create({
   title: { fontSize: 18, fontWeight: "600", color: "#000" },
   placeholder: { width: 32 },
   content: { flex: 1, paddingHorizontal: 20 },
-  summaryRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 12,gap:3 },
+  summaryRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 12, gap: 3 },
   sectionTitle: { fontSize: 15, fontWeight: "600", marginVertical: 12, color: "#000" },
 });

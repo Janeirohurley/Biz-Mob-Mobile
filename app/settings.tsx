@@ -1,7 +1,13 @@
-import { Ionicons } from "@expo/vector-icons";
+import Header from "@/components/header";
+import { SettingItem } from "@/components/SettingItem";
+import axios from "axios"; // Ajout de axios pour les requêtes HTTP
+import * as Crypto from "expo-crypto";
+import * as DocumentPicker from "expo-document-picker";
+import * as FileSystem from "expo-file-system";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Modal,
   ScrollView,
@@ -12,13 +18,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import * as DocumentPicker from "expo-document-picker";
-import * as FileSystem from "expo-file-system";
-import * as Sharing from "expo-sharing";
 import { useBusiness } from "../context/BusinessContext";
-import Header from "@/components/header";
-import * as Crypto from "expo-crypto";
-import { SettingItem } from "@/components/SettingItem";
 
 export default function Settings() {
   const { config, resetApp, logout, updateConfig, importData, clients, sales, debts, products, auditLogs } = useBusiness();
@@ -30,6 +30,52 @@ export default function Settings() {
   const [currencySymbol, setCurrencySymbol] = useState(config?.currencySymbol || "$");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [isSyncing, setIsSyncing] = useState(false); // Indicateur de synchronisation
+
+  // Fonction de synchronisation des données
+  // const handleSyncData = async () => {
+  //   setIsSyncing(true);
+  //   try {
+  //     // Préparer les données locales
+  //     const localData = {
+  //       config,
+  //       clients,
+  //       sales,
+  //       debts,
+  //       products,
+  //       auditLogs,
+  //       lastSyncTimestamp: config?.lastSyncTimestamp || new Date().toISOString(),
+  //     };
+
+  //     // Récupérer les données du serveur
+  //     const response = await axios.get("https://your-api-endpoint/api/sync", {
+  //       headers: { Authorization: `Bearer ${config?.authToken}` }, // Ajouter un token d'authentification si nécessaire
+  //     });
+  //     const serverData = response.data;
+
+  //     // Vérifier si une synchronisation est nécessaire
+  //     if (!serverData.lastSyncTimestamp || new Date(localData.lastSyncTimestamp) > new Date(serverData.lastSyncTimestamp)) {
+  //       // Les données locales sont plus récentes, envoyer au serveur
+  //       await axios.post("https://your-api-endpoint/api/sync", localData, {
+  //         headers: { Authorization: `Bearer ${config?.authToken}` },
+  //       });
+  //       Alert.alert("Success", "Data synced to server successfully!");
+  //     } else if (new Date(serverData.lastSyncTimestamp) > new Date(localData.lastSyncTimestamp)) {
+  //       // Les données du serveur sont plus récentes, mettre à jour localement
+  //        importData(serverData);
+  //       updateConfig({ lastSyncTimestamp: serverData.lastSyncTimestamp });
+  //       Alert.alert("Success", "Data synced from server successfully!");
+  //     } else {
+  //       // Aucune modification, pas besoin de synchroniser
+  //       Alert.alert("Info", "Data is already up to date.");
+  //     }
+  //   } catch (error) {
+  //     console.error("Sync error:", error);
+  //     Alert.alert("Error", "Failed to sync data. Please check your internet connection and try again.");
+  //   } finally {
+  //     setIsSyncing(false);
+  //   }
+  // };
 
   const handleReset = async () => {
     try {
@@ -76,8 +122,7 @@ export default function Settings() {
       Crypto.CryptoDigestAlgorithm.SHA256,
       password
     );
-    // Simuler la mise à jour du mot de passe (pas de système d'authentification réel ici)
-    updateConfig({ passwordHash }); // À remplacer par une vraie logique d'authentification
+    updateConfig({ passwordHash });
     Alert.alert("Success", "Password updated successfully!");
     setModalVisible(null);
     setPassword("");
@@ -87,7 +132,6 @@ export default function Settings() {
   const handleExportData = async () => {
     try {
       const data = { config, clients, sales, debts, products, auditLogs };
-      // Ask user to select a folder
       const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
 
       if (!permissions.granted) {
@@ -95,14 +139,12 @@ export default function Settings() {
         return;
       }
 
-      // Create a file in the selected directory
       const fileUri = await FileSystem.StorageAccessFramework.createFileAsync(
         permissions.directoryUri,
-        "bizmob_backup.json",
+        `bizmob_backup_${new Date().toISOString()}.json`,
         "application/json"
       );
 
-      // Write JSON content into the file
       await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(data, null, 2), {
         encoding: FileSystem.EncodingType.UTF8,
       });
@@ -113,15 +155,16 @@ export default function Settings() {
       Alert.alert("Error", "Failed to export data.");
     }
   };
+
   const handleImportData = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: "application/json", // limit to JSON files
+        type: "application/json",
         copyToCacheDirectory: true,
       });
 
       if (result.canceled) {
-        return; // user cancelled picker
+        return;
       }
 
       const fileUri = result.assets[0].uri;
@@ -130,8 +173,12 @@ export default function Settings() {
       });
 
       const data = JSON.parse(fileContent);
-      await importData(data);
+      if (!data.config || !data.clients || !data.sales || !data.debts || !data.products || !data.auditLogs) {
+        Alert.alert("Error", "Invalid backup file. Missing required data.");
+        return;
+      }
 
+      await importData(data);
       Alert.alert("Success", "Data imported successfully!");
     } catch (error) {
       console.error("Import error:", error);
@@ -201,6 +248,7 @@ export default function Settings() {
             subtitle="Download your business data"
             onPress={handleExportData}
             color="#5856D6"
+            disabled={isSyncing}
           />
           <SettingItem
             icon="cloud-upload"
@@ -208,25 +256,28 @@ export default function Settings() {
             subtitle="Restore from backup file"
             onPress={handleImportData}
             color="#AF52DE"
+            disabled={isSyncing}
           />
-          <SettingItem
+          {/* <SettingItem
             icon="sync"
             title="Backup & Sync"
-            subtitle="Automatic data backup"
-            onPress={() => Alert.alert("Coming Soon", "Backup & sync will be available soon!")}
+            subtitle="Synchronize data with server"
+            onPress={handleSyncData}
             color="#00C7BE"
-          />
+            disabled={isSyncing}
+          /> */}
+          {isSyncing && <ActivityIndicator size="large" color="#00C7BE" style={styles.loader} />}
         </View>
 
         {/* Account Settings */}
         <View style={styles.section}>
-          <SettingItem
+          {/* <SettingItem
             icon="notifications"
             title="Notifications"
             subtitle="Manage your alerts"
             onPress={() => Alert.alert("Coming Soon", "Notification settings will be available soon!")}
             color="#FF9500"
-          />
+          /> */}
           <SettingItem
             icon="lock-closed"
             title="Security"
@@ -515,40 +566,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 20,
   },
-  settingItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F2F2F7",
-  },
-  settingLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  iconContainer: {
-    width: 28,
-    height: 28,
-    borderRadius: 6,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-  },
-  settingText: {
-    flex: 1,
-  },
-  settingTitle: {
-    fontSize: 17,
-    fontWeight: "400",
-    color: "#000000",
-    marginBottom: 2,
-  },
-  settingSubtitle: {
-    fontSize: 15,
-    color: "#8E8E93",
+  loader: {
+    marginVertical: 12,
   },
   dangerSection: {
     backgroundColor: "#FFFFFF",
