@@ -38,7 +38,8 @@ jobs:
       - name: Build APK
         run: |
           cd android
-          sudo ./gradlew clean assembleRelease
+          chmod +x ./gradlew
+          sudo ./gradlew assembleRelease
 
       # 5️⃣ Télécharger l'APK dans les Artifacts GitHub
       - name: Upload APK
