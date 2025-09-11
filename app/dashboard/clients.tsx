@@ -187,12 +187,6 @@ export default function Clients() {
           showsVerticalScrollIndicator={false}
         />
       )}
-      <TouchableOpacity style={styles.searchIcon}>
-        <Ionicons name="search-outline" size={35} />
-      </TouchableOpacity>
-      <View>
-
-      </View>
     </SafeAreaView>
   );
 }
