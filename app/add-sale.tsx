@@ -37,7 +37,10 @@ export default function AddSale() {
         setProducts,
         setClients,
         addDebt,
+        updateDabt,
+        debts,
         addClient,
+        deleteDebt
     } = useBusiness();
     const route = useRoute();
     const navigation = useNavigation();
@@ -301,7 +304,13 @@ export default function AddSale() {
             setSales((prev) => prev.map((s) => (s.id === saleId ? saleData : s)));
 
             if (saleData.debtAmount > 0 && saleData.clientId) {
-                addDebt({
+                const existingdebt = debts.some((d) => d.saleId === saleId)
+                existingdebt ? updateDabt({
+                    saleId: saleData.id,
+                    clientId: saleData.clientId,
+                    amount: saleData.debtAmount,
+                    createdAt: saleData.date,
+                }) : addDebt({
                     id: generateId(),
                     saleId: saleData.id,
                     clientId: saleData.clientId,
@@ -309,6 +318,12 @@ export default function AddSale() {
                     createdAt: new Date().toISOString(),
                     paymentHistory: [],
                 });
+            }
+            if(saleData.paymentStatus ==="full"){
+                const existingdebt = debts.find((d) => d.saleId === saleId)
+                if(existingdebt){
+                    deleteDebt(existingdebt.id)
+                }
             }
 
             Alert.alert("Success", "Sale updated successfully!");

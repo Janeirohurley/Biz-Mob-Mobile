@@ -14,12 +14,17 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useBusiness } from "../context/BusinessContext";
 import { AuditLog } from "../types/business";
 import Header from "@/components/header";
+import FilterTabs from "@/components/FilterTabs";
+import { filterItems } from "@/utils/generique/filterItems";
+import { groupByDate } from "@/utils/logicBusinness";
+import EmptyState from "@/components/EmptyState";
+import SearchBar from "@/components/SearchBar";
 
 export default function AuditLogs() {
   const { auditLogs } = useBusiness();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedFilter, setSelectedFilter] = useState<'all' | 'create' | 'update' | 'delete' | 'login' | 'error'>('all');
+  const [selectedFilter, setSelectedFilter] = useState<'all' | 'create' | 'update' | 'delete' | 'login' | 'error' >('all');
 
   const getEventIcon = (eventType: string) => {
     switch (eventType) {
@@ -48,14 +53,21 @@ export default function AuditLogs() {
     }
   };
 
-  const filteredLogs = auditLogs.filter(log => {
-    const matchesFilter = selectedFilter === 'all' || log.eventType === selectedFilter;
-    const matchesSearch = searchQuery === '' ||
-      log.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.entityType.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesFilter && matchesSearch;
-  }).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+  const filteredLogs = filterItems({
+    items: auditLogs,
+    selectedFilter, // ex: "all" | "create" | "update" | "delete" | "login" | "error"
+    searchQuery,
+    typeField: "eventType", // le champ du log qui sert de type
+    searchFields: ["description", "userName", "entityType"], // recherche multi-champs
+    filterMapping: {
+      create: "create",
+      update: "update",
+      delete: "delete",
+      login: "login",
+      error: "error",
+    },
+  });
 
   const renderLogItem = ({ item }: { item: AuditLog }) => (
     <View style={styles.logItem}>
@@ -105,66 +117,26 @@ export default function AuditLogs() {
     </View>
   );
 
-  const groupAudditLogByDate = (items: AuditLog[]) => {
-    const groups: { [timestamp: string]: AuditLog[] } = {};
 
-    items.forEach(item => {
-      const dateKey = new Date(item.timestamp).toISOString().split("T")[0]; // yyyy-mm-dd
-      if (!groups[dateKey]) groups[dateKey] = [];
-      groups[dateKey].push(item);
-    });
-
-    return Object.keys(groups)
-      .sort((a, b) => new Date(b).getTime() - new Date(a).getTime()) // dates descendantes
-      .map(dateKey => ({
-        title: new Date(dateKey).toLocaleDateString('fr-FR', {
-          weekday: 'long',
-          day: 'numeric',
-          month: 'long',
-          year: 'numeric'
-        }),
-        data: groups[dateKey]
-      }));
-  };
 
 
   return (
     <SafeAreaView style={styles.container} >
       <Header title="Audit Logs" showBack />
       {/* Search Bar */}
-      <View style={styles.searchSection}>
-        <View style={styles.searchBar}>
-          <Ionicons name="search" size={20} color="#8E8E93" />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search logs..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholderTextColor="#8E8E93"
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={20} color="#8E8E93" />
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
+      <SearchBar
+        value={searchQuery}
+        onChange={setSearchQuery}
+        placeholder="Search history..."
+      />
 
       {/* Filter Tabs */}
-      <View style={styles.filterSection}>
-        {(['all', 'create', 'update', 'delete', 'login', 'error'] as const).map((filter) => (
-          <TouchableOpacity
-            key={filter}
-            style={[styles.filterTab, selectedFilter === filter && styles.filterTabActive]}
-            onPress={() => setSelectedFilter(filter)}
-            activeOpacity={0.6}
-          >
-            <Text style={[styles.filterText, selectedFilter === filter && styles.filterTextActive]}>
-              {filter.charAt(0).toUpperCase() + filter.slice(1)}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+
+      <FilterTabs<'all' | 'create' | 'update' | 'delete' | 'login' | 'error'>
+        options={['all', 'create', 'update', 'delete', 'login', 'error',]}
+        selected={selectedFilter}
+        onSelect={(filter) => setSelectedFilter(filter)}
+      />
 
       {/* Summary Stats */}
       <View style={styles.statsSection}>
@@ -190,16 +162,19 @@ export default function AuditLogs() {
 
       {/* Logs List */}
       {filteredLogs.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Ionicons name="document-text-outline" size={64} color="#CBD5E1" />
-          <Text style={styles.emptyTitle}>No Logs Found</Text>
-          <Text style={styles.emptyText}>
-            {searchQuery ? 'Try adjusting your search' : 'Audit logs will appear here'}
-          </Text>
-        </View>
+        <EmptyState
+        iconName="document-text-outline"
+        title="No Logs Found"
+        subtitle= {searchQuery ? 'Trye adjusting your search' : 'Audit logs will appear here'}
+        
+        />
       ) : (
-         <SectionList
-          sections={groupAudditLogByDate(filteredLogs)}
+        <SectionList
+            sections={groupByDate({
+              items: filteredLogs,
+              dateField: "timestamp",
+              locale: "fr-FR",
+            })}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => renderLogItem({ item })}
           renderSectionHeader={({ section: { title } }) => (
@@ -212,7 +187,7 @@ export default function AuditLogs() {
           }}
         />
       )}
-     
+
     </SafeAreaView>
   );
 }
@@ -222,16 +197,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F2F2F7",
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
-  },
+
   sectionHeader: {
     fontSize: 14,
     fontWeight: "700",
@@ -240,58 +206,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginLeft: 4,
   },
-  backButton: {
-    padding: 4,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#000000",
-  },
-  placeholder: {
-    width: 32,
-  },
-  searchSection: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  searchBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 12,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: "#000000",
-  },
-  filterSection: {
-    flexDirection: "row",
-    paddingHorizontal: 20,
-    marginBottom: 16,
-    gap: 8,
-  },
-  filterTab: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-  },
-  filterTabActive: {
-    backgroundColor: "#007AFF",
-  },
-  filterText: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: "#000000",
-  },
-  filterTextActive: {
-    color: "#FFFFFF",
-  },
+
   statsSection: {
     paddingHorizontal: 20,
     marginBottom: 20,
@@ -317,10 +232,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#8E8E93",
   },
-  list: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
+
   logItem: {
     backgroundColor: "#FFFFFF",
     borderRadius: 12,
@@ -406,22 +318,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#DC2626",
   },
-  emptyState: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 32,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#1E293B",
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: "#64748B",
-    textAlign: "center",
-  },
+
 });

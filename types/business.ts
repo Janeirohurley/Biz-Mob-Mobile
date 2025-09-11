@@ -171,3 +171,17 @@ export interface BackupData {
   config: AppConfig;
   auditLogs: AuditLog[]; // Ajout des logs pour backup complet
 }
+
+
+
+export type HistoryItem = {
+  id: string;
+  type: 'sale' | 'purchase' | 'payment' | 'audit';
+  title: string;
+  subtitle: string;
+  amount?: number;
+  date: string;
+  status?: string;
+  icon: string;
+  color: string;
+};

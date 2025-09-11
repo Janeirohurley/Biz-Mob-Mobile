@@ -45,6 +45,7 @@ interface BusinessContextType {
     debts: Debt[];
     setDebts: React.Dispatch<React.SetStateAction<Debt[]>>;
     addDebt: (debt: Debt) => void;
+    updateDabt: (dept: Partial<Debt>) => void;
     deleteDebt: (id: string) => void;
     addDebtPayment: (payment: DebtPayment) => void;
     deleteDebtPayment: (debtId: string, paymentId: string) => void;
@@ -490,6 +491,13 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         });
     };
 
+    const updateDabt = (debt: Partial<Debt>) => {
+        setDebts((prev) => prev.map((d) => d.saleId === debt.saleId ? {
+            ...d,
+            ...debt
+        } : d));
+    }
+
     const deleteDebt = (id: string) => {
         const debt = debts.find((d) => d.id === id);
         if (!debt) return;
@@ -722,6 +730,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 deleteClient,
                 debts,
                 addDebt,
+                updateDabt,
                 deleteDebt,
                 addDebtPayment,
                 deleteDebtPayment,

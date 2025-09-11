@@ -78,7 +78,7 @@ const Debts: React.FC = () => {
       `Are you sure you want to delete the debt for ${clientName} (ID: ${debtId.slice(0, 8)})?`,
       [
         {
-          text: "Cancel",
+          text: "Non",
           style: "cancel",
         },
         {
@@ -87,6 +87,32 @@ const Debts: React.FC = () => {
           onPress: () => {
             deleteDebt(debtId);
             Alert.alert("Success", "Debt deleted successfully!");
+          },
+        },
+      ]
+    );
+  };
+
+  const handleDoneDebt = (debtId: string, clientName: string, amount: number) => {
+    Alert.alert(
+      "Confirm Debt Payment",
+      `Are you sure  ${clientName} Has pay all the debts have for you about ${amount}`,
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Yes",
+          style: "default",
+          onPress: () => {
+            addDebtPayment({
+              id: generateId(),
+              debtId,
+              amount,
+              date: paymentDate.toISOString(),
+            });
+            Alert.alert("Success", "Debt payed successfully!");
           },
         },
       ]
@@ -115,13 +141,24 @@ const Debts: React.FC = () => {
     const paid = item.paymentHistory.reduce((sum: number, p: DebtPayment) => sum + p.amount, 0);
     const remaining = item.amount - paid;
     return (
-      <View style={styles.formCard} key={item.id}>
-        <View style={styles.cardHeader}>
-          <Ionicons name="cash-outline" size={24} color="#007AFF" style={styles.cardIcon} />
-          <View>
-            <Text style={styles.clientName}>{client?.name || "Unknown client"}</Text>
-            <Text style={styles.subText}>Debt ID: {item.id.slice(0, 8)}</Text>
-          </View>
+      <View style={styles.formCard} key={item.id} >
+        <View style={[styles.cardHeader, { justifyContent: "space-between" }]}>
+          <TouchableOpacity style={styles.cardHeader} onPress={() => router.push(`/client-details?clientId=${item.clientId}`)}>
+            <Ionicons name="cash-outline" size={24} color="#007AFF" style={styles.cardIcon} />
+            <View>
+              <Text style={styles.clientName}>{client?.name || "Unknown client"}</Text>
+              <Text style={styles.subText}>Debt ID: {item.id.slice(0, 8)}</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.markdone}
+            onPress={() => handleDoneDebt(item.id, client?.name || "Unknown client", remaining)}
+            activeOpacity={0.6}
+            accessibilityLabel={`Delete debt for ${client?.name || "Unknown client"}`}
+          >
+            <Ionicons name="checkmark-outline" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
         </View>
         <View style={styles.cardDetails}>
           <View style={styles.detailRow}>
@@ -219,6 +256,7 @@ const Debts: React.FC = () => {
               >
                 <Text style={styles.modalButtonText}>Cancel</Text>
               </TouchableOpacity>
+
             </View>
           </View>
         ) : (
@@ -229,7 +267,7 @@ const Debts: React.FC = () => {
                 onPress={() => setSelectedDebt(item.id)}
                 activeOpacity={0.6}
               >
-                <Text style={styles.addButtonText}>Add Payment</Text>
+                <Text style={styles.addButtonText}>Add Paymenth</Text>
               </TouchableOpacity> : <View style={styles.addButton}><Text style={styles.addButtonText}>Full Paid</Text></View>
             }
 
@@ -241,6 +279,7 @@ const Debts: React.FC = () => {
             >
               <Ionicons name="trash-outline" size={20} color="#FFFFFF" />
             </TouchableOpacity>
+
           </View>
         )}
       </View>
@@ -351,6 +390,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 12,
+
   },
   sectionHeader: {
     fontSize: 14,
@@ -459,6 +499,13 @@ const styles = StyleSheet.create({
     padding: 8,
     backgroundColor: "#FF3B30",
     borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  markdone: {
+    padding: 8,
+    backgroundColor: "#34C759",
+    borderRadius: 30,
     alignItems: "center",
     justifyContent: "center",
   },

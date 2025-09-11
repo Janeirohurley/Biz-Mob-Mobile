@@ -19,6 +19,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useBusiness } from "../context/BusinessContext";
+import { version, name } from "../package.json";
 
 export default function Settings() {
   const { config, resetApp, logout, updateConfig, importData, clients, sales, debts, products, auditLogs } = useBusiness();
@@ -323,8 +324,13 @@ export default function Settings() {
           <SettingItem
             icon="information-circle"
             title="About BizMob"
-            subtitle="Version 1.0.0"
-            onPress={() => Alert.alert("About BizMob", "BizMob - Your Digital Business Notebook\n\nVersion 1.0.0\nBuilt with ❤️ for small businesses\n\n© 2025 BizMob. All rights reserved.")}
+            subtitle={`Version ${version}`}
+            onPress={() =>
+              Alert.alert(
+                `About ${name}`,
+                `${name} - Your Digital Business Notebook\n\nVersion ${version}\nBuilt with ❤️ for small businesses\n\n© 2025 BizMob. All rights reserved.`
+              )
+            }
             color="#8E8E93"
           />
           <SettingItem

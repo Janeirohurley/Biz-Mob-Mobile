@@ -79,7 +79,7 @@ export default function Sales() {
           </Text>
           {item.items.slice(0, 2).map((saleItem, index) => (
             <Text key={index} style={styles.itemText}>
-              {saleItem.quantity}x {getProductName(saleItem.productId)} - {config?.currencySymbol || "$"}{saleItem.totalPrice}
+              {saleItem.quantity}x {getProductName(saleItem.productId)}{" =>"} {saleItem.quantity}x {saleItem.unitPrice}{config?.currencySymbol || "$"} = {saleItem.totalPrice}{config?.currencySymbol || "$"}
             </Text>
           ))}
           {item.items.length > 2 && (

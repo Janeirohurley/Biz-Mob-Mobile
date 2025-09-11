@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useBusiness } from "../context/BusinessContext";
 import Header from "@/components/header";
+import { Debt, Sale } from "@/types/business";
 
 export default function ClientDetails() {
   const { clientId } = useLocalSearchParams<{ clientId: string }>();
@@ -23,6 +24,15 @@ export default function ClientDetails() {
   const client = clients.find(c => c.id === clientId);
   const clientSales = sales.filter(sale => sale.clientId === clientId);
   const clientDebts = debts.filter(debt => debt.clientId === clientId);
+  const formatDate = (date: string | Date) => {
+    const d = typeof date === "string" ? new Date(date) : date;
+    return d.toLocaleDateString("fr-FR", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
 
   if (!client) {
     return (
@@ -79,7 +89,7 @@ export default function ClientDetails() {
   const averageOrderValue = clientSales.length > 0 ? client.totalSpent / clientSales.length : 0;
   const lastSale = clientSales.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
 
-  const renderSale = ({ item }: { item: any }) => (
+  const renderSale = ({ item }: { item: Sale }) => (
     <TouchableOpacity style={styles.listItem} activeOpacity={0.6}>
       <View style={styles.listItemHeader}>
         <Text style={styles.listItemTitle}>Sale #{item.id.slice(-4).toUpperCase()}</Text>
@@ -109,7 +119,7 @@ export default function ClientDetails() {
     </TouchableOpacity>
   );
 
-  const renderDebt = ({ item }: { item: any }) => {
+  const renderDebt = ({ item }: { item: Debt }) => {
     const totalPaid = item.paymentHistory.reduce((sum: number, payment: any) => sum + payment.amount, 0);
     const remaining = Math.max(0, item.amount - totalPaid);
 
@@ -134,6 +144,18 @@ export default function ClientDetails() {
             />
           </View>
         </View>
+        {item.paymentHistory.length > 0 && (
+          <View style={styles.paymentHistory}>
+            <Text style={styles.sectionTitle}>Payment History</Text>
+            {item.paymentHistory.map((payment) => (
+              <View key={payment.id} style={styles.paymentItem}>
+                <Text style={styles.paymentText}>
+                  {formatDate(payment.date)}: {config?.currencySymbol || "$"}{payment.amount.toFixed(2)}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
       </TouchableOpacity>
     );
   };
@@ -566,5 +588,25 @@ export const styles = StyleSheet.create({
     backgroundColor: "#FF3B30",
     alignItems: "center",
     justifyContent: "center",
+  },
+  paymentHistory: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#E2E8F0",
+  },
+  paymentItem: {
+    marginBottom: 6,
+  },
+  paymentText: {
+    fontSize: 12,
+    color: "#000000",
+  },
+  paymentBox: {
+    marginTop: 12,
+  },  
+  subText: {
+    fontSize: 12,
+    color: "#8E8E93",
   },
 });

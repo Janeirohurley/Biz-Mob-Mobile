@@ -2,7 +2,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
 import {
+  Platform,
   ScrollView,
+  SectionList,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -10,6 +12,11 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useBusiness } from "../../context/BusinessContext";
+import HistoryItemCard from "@/components/HistoryItemCard";
+import { createHistoryItems, groupByDate } from "@/utils/logicBusinness";
+import { HistoryItem } from "@/types/business";
+import EmptyState from "@/components/EmptyState";
+import { filterItems } from "@/utils/generique/filterItems";
 const StatCard = ({
   title,
   value,
@@ -37,7 +44,7 @@ const StatCard = ({
 );
 
 export default function Dashboard() {
-  const { config, products, sales, clients, debts, resetApp } = useBusiness();
+  const { config, products, sales, clients, debts, purchases } = useBusiness();
   const router = useRouter();
 
   // Calculs basés sur les vraies données
@@ -48,6 +55,7 @@ export default function Dashboard() {
     const totalPaid = debt.paymentHistory.reduce((paidSum, payment) => paidSum + payment.amount, 0);
     return sum + Math.max(0, debt.amount - totalPaid);
   }, 0);
+  const totalCollected = totalSales - totalDebts
 
   const lowStockProducts = products.filter((p) => p.stock < 10);
   const unpaidDebts = debts.filter((d) => {
@@ -65,6 +73,23 @@ export default function Dashboard() {
   const topClient = clients.reduce((top, client) =>
     client.totalSpent > (top?.totalSpent || 0) ? client : top, null as any
   );
+  const historyItems = createHistoryItems(
+    { sales, purchases, debts, clients, products }
+  );
+
+  const filteredItems = filterItems<HistoryItem>({
+    items: historyItems,
+    typeField: "type",
+    searchFields: ["title", "subtitle", "status"],
+    filterMapping: {
+      sales: "sale",
+      purchases: "purchase",
+      payments: "payment",
+      audit: "audit",
+    },
+    start: 0,
+    end: 10
+  });
 
 
 
@@ -90,9 +115,9 @@ export default function Dashboard() {
             color="#007AFF"
           />
           <StatCard
-            title="Clients"
-            value={totalClients}
-            icon="person-circle"
+            title="Collected Amount"
+            value={totalCollected}
+            icon="wallet-outline"
             color="#FF9500"
           />
           <StatCard
@@ -201,6 +226,40 @@ export default function Dashboard() {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* dernier operation recente */}
+        <View style={{ flex: 1 }}>
+          {filteredItems.length === 0 ? (
+            <EmptyState
+              iconName="time-outline"
+              iconSize={64}
+              iconColor="#CBD5E1"
+              title="No Recently activity availible"
+            />
+          ) : (
+            <SectionList
+                sections={groupByDate({
+                  items: historyItems,
+                  dateField: "date",
+                  locale: "fr-FR",
+                })}
+              keyExtractor={(item: HistoryItem) => item.id}
+              renderItem={({ item }) => (
+                <HistoryItemCard item={item} currencySymbol={config?.currencySymbol} />
+              )}
+              renderSectionHeader={({ section: { title } }) => (
+                <Text style={styles.sectionHeader}>{title}</Text>
+              )}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{
+                paddingHorizontal: 20,
+                paddingBottom: Platform.OS === "android" ? 40 : 20,
+              }}
+            />
+          )}
+        </View>
+
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -407,5 +466,14 @@ export const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "500",
     color: "#FF3B30",
+  },
+
+  sectionHeader: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#1E293B",
+    marginTop: 16,
+    marginBottom: 8,
+    marginLeft: 4,
   },
 });

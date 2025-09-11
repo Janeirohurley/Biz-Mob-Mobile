@@ -1,7 +1,7 @@
 import Header from "@/components/header";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React from "react";
+import React, { useState } from "react";
 import {
   FlatList,
   StyleSheet,
@@ -12,10 +12,13 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useBusiness } from "../../context/BusinessContext";
 import { Client } from "../../types/business";
+import SearchBar from "@/components/SearchBar";
+import { filterItems } from "@/utils/generique/filterItems";
 
 export default function Clients() {
   const { clients, config, sales, debts } = useBusiness();
   const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState('');
 
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
@@ -128,6 +131,12 @@ export default function Clients() {
   // Top clients
   const topClients = [...clients].sort((a, b) => b.totalSpent - a.totalSpent).slice(0, 3);
 
+  const filteredItems = filterItems<Client>({
+    items: clients,
+    searchQuery,
+    searchFields: ["name"],
+
+  });
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <Header title="Clients" showBack={false} />
@@ -153,25 +162,17 @@ export default function Clients() {
           </View>
         </View>
 
-        <View style={styles.statsCard}>
-          <View style={styles.statRow}>
-            <View style={styles.statItem}>
-              <Text style={styles.statLabel}>Total Revenue</Text>
-              <Text style={styles.statValue}>
-                {config?.currencySymbol || "$"}{totalRevenue.toLocaleString()}
-              </Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statLabel}>Average Spending</Text>
-              <Text style={styles.statValue}>
-                {config?.currencySymbol || "$"}{averageSpending.toFixed(0)}
-              </Text>
-            </View>
-          </View>
-        </View>
       </View>
+      <SearchBar
+        value={searchQuery}
+        onChange={setSearchQuery}
+        placeholder="Search client..."
+      />
 
-      {clients.length === 0 ? (
+
+
+
+      {filteredItems.length === 0 ? (
         <View style={styles.emptyState}>
           <Ionicons name="people-outline" size={64} color="#CBD5E1" />
           <Text style={styles.emptyTitle}>No Clients Yet</Text>
@@ -179,21 +180,33 @@ export default function Clients() {
         </View>
       ) : (
         <FlatList
-          data={clients.sort((a, b) => b.totalSpent - a.totalSpent)}
+          data={filteredItems.sort((a, b) => b.totalSpent - a.totalSpent)}
           renderItem={renderClient}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
         />
       )}
+      <TouchableOpacity style={styles.searchIcon}>
+        <Ionicons name="search-outline" size={35} />
+      </TouchableOpacity>
+      <View>
+
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  searchIcon: {
+    position: "absolute",
+    bottom: 10,
+    right: 20,
+  },
   container: {
     flex: 1,
     backgroundColor: "#F2F2F7",
+    position: "relative"
   },
   addButton: {
     width: 40,
@@ -205,7 +218,6 @@ const styles = StyleSheet.create({
   },
   summarySection: {
     paddingHorizontal: 20,
-    marginBottom: 20,
   },
   summaryRow: {
     flexDirection: "row",
