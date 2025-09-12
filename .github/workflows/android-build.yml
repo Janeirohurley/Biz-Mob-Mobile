@@ -72,14 +72,23 @@ jobs:
 
       # 9️⃣ Upload all APKs from release folder
       - name: Upload APKs
-        run: |
-          for apk in android/app/build/outputs/apk/release/*.apk; do
-            echo "Uploading $apk..."
-            npx actions/upload-release-asset@v1 \
-              --upload_url ${{ steps.create_release.outputs.upload_url }} \
-              --asset_path "$apk" \
-              --asset_name "$(basename "$apk")" \
-              --asset_content_type "application/vnd.android.package-archive"
-          done
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require("fs");
+            const path = require("path");
+            const uploadUrl = "${{ steps.create_release.outputs.upload_url }}";
+            const dir = "android/app/build/outputs/apk/release";
+            const files = fs.readdirSync(dir).filter(f => f.endsWith(".apk"));
+
+            for (const file of files) {
+              const filePath = path.join(dir, file);
+              console.log(`Uploading ${filePath}...`);
+              await github.rest.repos.uploadReleaseAsset({
+                url: uploadUrl,
+                headers: { "content-type": "application/vnd.android.package-archive" },
+                name: file,
+                data: fs.readFileSync(filePath)
+              });
+            }
