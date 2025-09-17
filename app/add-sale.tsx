@@ -155,11 +155,16 @@ export default function AddSale() {
                 quantity,
                 unitPrice: price,
                 totalPrice: quantity * price,
+                // Ajoute ces champs si tu veux tracker la sync avec Product
+                lastSyncTimestamp: undefined,
+                isDeleted: false,
                 availableStock: product.stock,
+                version: 1,
             };
             setCart([...cart, newItem]);
         }
 
+        // Reset des champs
         setSelectedProduct("");
         setSelectedQuantity("");
         setSelectedPrice("");
@@ -244,6 +249,10 @@ export default function AddSale() {
                 quantity: item.quantity,
                 unitPrice: item.unitPrice,
                 totalPrice: item.totalPrice,
+                version: item.version || 1,
+                isDeleted: item.isDeleted || false,
+                syncStatus: item.syncStatus || 'pending',
+                lastSyncTimestamp: item.lastSyncTimestamp,
             })),
             totalAmount,
             paidAmount:
@@ -254,8 +263,13 @@ export default function AddSale() {
                         : 0,
             debtAmount: remainingDebt,
             paymentStatus,
-            date: selectedDate.toISOString(), // Utilisation de la date sélectionnée
+            date: selectedDate.toISOString(),
+            version: 1,
+            isDeleted: false,
+            syncStatus: 'pending',
+            lastSyncTimestamp: undefined,
         };
+
 
         if (saleId) {
             const existingSale = sales.find((s) => s.id === saleId);
@@ -304,21 +318,36 @@ export default function AddSale() {
             setSales((prev) => prev.map((s) => (s.id === saleId ? saleData : s)));
 
             if (saleData.debtAmount > 0 && saleData.clientId) {
-                const existingdebt = debts.some((d) => d.saleId === saleId)
-                existingdebt ? updateDabt({
-                    saleId: saleData.id,
-                    clientId: saleData.clientId,
-                    amount: saleData.debtAmount,
-                    createdAt: saleData.date,
-                }) : addDebt({
-                    id: generateId(),
-                    saleId: saleData.id,
-                    clientId: saleData.clientId,
-                    amount: saleData.debtAmount,
-                    createdAt: new Date().toISOString(),
-                    paymentHistory: [],
-                });
+                const existingDebt = debts.find((d) => d.saleId === saleId);
+                if (existingDebt) {
+                    updateDabt({
+                        ...existingDebt,
+                        version: (existingDebt.version ?? 1) + 1, // incrémente la version
+                        isDeleted: existingDebt.isDeleted ?? false,
+                        syncStatus: 'pending',
+                        lastSyncTimestamp: undefined,
+                        saleId: saleData.id,
+                        clientId: saleData.clientId,
+                        amount: saleData.debtAmount,
+                        createdAt: saleData.date,
+                    });
+                } else {
+                    addDebt({
+                        version: 1, // nouvelle dette commence à 1
+                        isDeleted: false,
+                        syncStatus: 'pending',
+                        lastSyncTimestamp: undefined,
+                        id: generateId(),
+                        saleId: saleData.id,
+                        clientId: saleData.clientId,
+                        amount: saleData.debtAmount,
+                        createdAt: new Date().toISOString(),
+                        paymentHistory: [],
+                    });
+                }
             }
+
+
             if(saleData.paymentStatus ==="full"){
                 const existingdebt = debts.find((d) => d.saleId === saleId)
                 if(existingdebt){
@@ -352,6 +381,10 @@ export default function AddSale() {
 
             if (saleData.debtAmount > 0 && saleData.clientId) {
                 addDebt({
+                    version: 1,
+                    isDeleted: false,
+                    syncStatus: 'pending',
+                    lastSyncTimestamp: undefined,
                     id: generateId(),
                     saleId: saleData.id,
                     clientId: saleData.clientId,
@@ -360,6 +393,7 @@ export default function AddSale() {
                     paymentHistory: [],
                 });
             }
+
 
             addSale(saleData);
             Alert.alert("Success", "Sale created successfully!");
@@ -375,6 +409,10 @@ export default function AddSale() {
         }
 
         const newClient: Client = {
+            version: 1,
+            isDeleted: false,
+            syncStatus: 'pending',
+            lastSyncTimestamp: undefined,
             id: generateId(),
             name: newClientName.trim(),
             purchaseCount: 0,
@@ -382,6 +420,7 @@ export default function AddSale() {
             debtAmount: 0,
             createdAt: new Date().toISOString(),
         };
+
 
         addClient(newClient);
         setClientId(newClient.id);

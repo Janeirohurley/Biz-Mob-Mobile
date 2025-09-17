@@ -20,9 +20,11 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useBusiness } from "../context/BusinessContext";
 import { version, name } from "../package.json";
+import { BackupData } from "@/types/business";
+import SyncUrlModal from "@/components/SyncUrlModal";
 
 export default function Settings() {
-  const { config, resetApp, logout, updateConfig, importData, clients, sales, debts, products, auditLogs } = useBusiness();
+  const { config, resetApp, logout, updateConfig, importData, clients, sales, debts, products, auditLogs, setClients, setSales, setAuditLogs, setDebts, setPurchases, setProducts } = useBusiness();
   const router = useRouter();
   const [modalVisible, setModalVisible] = useState<"business" | "currency" | "security" | null>(null);
   const [businessName, setBusinessName] = useState(config?.businessName || "");
@@ -32,51 +34,157 @@ export default function Settings() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isSyncing, setIsSyncing] = useState(false); // Indicateur de synchronisation
+  const [modalVisibleUrl, setModalVisibleUrl] = useState(false);
+
+
+  const handleOpenModal = () => setModalVisibleUrl(true);
 
   // Fonction de synchronisation des données
-  // const handleSyncData = async () => {
-  //   setIsSyncing(true);
-  //   try {
-  //     // Préparer les données locales
-  //     const localData = {
-  //       config,
-  //       clients,
-  //       sales,
-  //       debts,
-  //       products,
-  //       auditLogs,
-  //       lastSyncTimestamp: config?.lastSyncTimestamp || new Date().toISOString(),
-  //     };
+  // Fonction de synchronisation des données
+  const handleSyncData = async (
+    endpoint?: string,
+    updateProgress?: (p: number) => void
+  ) => {
+    const syncUrl = endpoint || "http://localhost:3000"; // URL par défaut
+    setIsSyncing(true);
+    try {
+      if (!config) throw new Error("Configuration non disponible");
 
-  //     // Récupérer les données du serveur
-  //     const response = await axios.get("https://your-api-endpoint/api/sync", {
-  //       headers: { Authorization: `Bearer ${config?.authToken}` }, // Ajouter un token d'authentification si nécessaire
-  //     });
-  //     const serverData = response.data;
+      const steps = 6; // nombre total d'étapes
+      let currentStep = 0;
+      const advance = () => {
+        currentStep++;
+        if (updateProgress) {
+          updateProgress(Math.round((currentStep / steps) * 100));
+        }
+      };
 
-  //     // Vérifier si une synchronisation est nécessaire
-  //     if (!serverData.lastSyncTimestamp || new Date(localData.lastSyncTimestamp) > new Date(serverData.lastSyncTimestamp)) {
-  //       // Les données locales sont plus récentes, envoyer au serveur
-  //       await axios.post("https://your-api-endpoint/api/sync", localData, {
-  //         headers: { Authorization: `Bearer ${config?.authToken}` },
-  //       });
-  //       Alert.alert("Success", "Data synced to server successfully!");
-  //     } else if (new Date(serverData.lastSyncTimestamp) > new Date(localData.lastSyncTimestamp)) {
-  //       // Les données du serveur sont plus récentes, mettre à jour localement
-  //        importData(serverData);
-  //       updateConfig({ lastSyncTimestamp: serverData.lastSyncTimestamp });
-  //       Alert.alert("Success", "Data synced from server successfully!");
-  //     } else {
-  //       // Aucune modification, pas besoin de synchroniser
-  //       Alert.alert("Info", "Data is already up to date.");
-  //     }
-  //   } catch (error) {
-  //     console.error("Sync error:", error);
-  //     Alert.alert("Error", "Failed to sync data. Please check your internet connection and try again.");
-  //   } finally {
-  //     setIsSyncing(false);
-  //   }
-  // };
+      // 1. Préparer les données locales
+      const localData: BackupData = {
+        config,
+        clients,
+        sales,
+        purchases: [],
+        debts,
+        products,
+        auditLogs,
+        lastSyncTimestamp:
+          config?.lastSyncTimestamp || new Date().toISOString(),
+        version: config.version || 1,
+      };
+      advance();
+
+      // 2. Récupérer les données du serveur
+      const response = await axios.get(`${syncUrl}/fetch`, {
+        headers: { "Content-Type": "application/json" },
+      });
+      const serverData: BackupData = response.data;
+      advance();
+
+      // 3. Fusionner toutes les entités
+      const mergeEntities = <
+        T extends {
+          id: string;
+          version?: number;
+          isDeleted?: boolean;
+          updatedAt?: string;
+          createdAt?: string;
+        }
+      >(
+        local: T[],
+        server: T[]
+      ): T[] => {
+        const map = new Map<string, T>();
+        local.forEach((item) => {
+          if (!item.isDeleted) map.set(item.id, item);
+        });
+        server.forEach((item) => {
+          const existing = map.get(item.id);
+          if (!existing) {
+            map.set(item.id, {
+              ...item,
+              syncStatus: "synced",
+              lastSyncTimestamp: new Date().toISOString(),
+            });
+          } else if (item.isDeleted) {
+            map.set(item.id, {
+              ...existing,
+              isDeleted: true,
+              syncStatus: "synced",
+              lastSyncTimestamp: new Date().toISOString(),
+            });
+          } else if (
+            (item.version || 0) > (existing.version || 0) ||
+            new Date(item.updatedAt || item.createdAt || 0) >
+            new Date(existing.updatedAt || existing.createdAt || 0)
+          ) {
+            map.set(item.id, {
+              ...item,
+              syncStatus: "synced",
+              lastSyncTimestamp: new Date().toISOString(),
+            });
+          }
+        });
+        return Array.from(map.values());
+      };
+
+      const mergedData: BackupData = {
+        config: serverData.config || localData.config,
+        clients: mergeEntities(localData.clients, serverData.clients),
+        sales: mergeEntities(localData.sales, serverData.sales),
+        purchases: mergeEntities(
+          localData.purchases || [],
+          serverData.purchases || []
+        ),
+        debts: mergeEntities(localData.debts, serverData.debts),
+        products: mergeEntities(localData.products, serverData.products),
+        auditLogs: mergeEntities(localData.auditLogs, serverData.auditLogs),
+        lastSyncTimestamp: new Date().toISOString(),
+        version: Math.max(localData.version || 0, serverData.version || 0) + 1,
+      };
+      advance();
+
+      // 4. Mettre à jour l'état local
+      setClients(mergedData.clients);
+      setSales(mergedData.sales);
+      setPurchases(mergedData.purchases);
+      setDebts(mergedData.debts);
+      setProducts(mergedData.products);
+      setAuditLogs(mergedData.auditLogs);
+      updateConfig({
+        lastSyncTimestamp: mergedData.lastSyncTimestamp,
+        version: mergedData.version,
+      });
+      advance();
+
+      // 5. Envoyer la fusion au serveur
+      await axios.post(`${syncUrl}/sync`, mergedData, {
+        headers: { "Content-Type": "application/json" },
+      });
+      advance();
+
+      // 6. Terminé
+      Alert.alert("Success", "Data synced successfully (merged)!");
+      advance();
+    } catch (error) {
+      console.error("Sync error:", error);
+      Alert.alert(
+        "Error",
+        "Failed to sync data. Please check your internet connection and try again."
+      );
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+
+
+  const handleConfirmUrl = (url: string) => {
+    setModalVisibleUrl(false);
+    handleSyncData(url); // passe l’URL saisie à ta fonction de sync
+  };
+
+ 
 
   const handleReset = async () => {
     try {
@@ -259,15 +367,22 @@ export default function Settings() {
             color="#AF52DE"
             disabled={isSyncing}
           />
-          {/* <SettingItem
+          <SettingItem
             icon="sync"
             title="Backup & Sync"
             subtitle="Synchronize data with server"
-            onPress={handleSyncData}
+            onPress={handleOpenModal}
             color="#00C7BE"
             disabled={isSyncing}
-          /> */}
+          />
           {isSyncing && <ActivityIndicator size="large" color="#00C7BE" style={styles.loader} />}
+          <SyncUrlModal
+            visible={modalVisibleUrl}
+            onClose={() => setModalVisibleUrl(false)}
+            onConfirm={async (url, updateProgress) => {
+              await handleSyncData(url, updateProgress);
+            }}
+          />
         </View>
 
         {/* Account Settings */}

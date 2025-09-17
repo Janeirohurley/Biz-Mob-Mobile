@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Biz-Mobile",
-    "slug": "Biz-Mobile",
+    "name": "Biz Mobile",
+    "slug": "Biz-Mob-Mobile",
     "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -17,7 +17,11 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.anonymous.BizMobMobile"
+      "package": "com.anonymous.BizMobMobile",
+      "permissions": [
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -44,6 +48,7 @@
       "eas": {
         "projectId": "6d8fd11c-36e3-4240-8ddf-98a017f73025"
       }
-    }
+    },
+    "owner": "janeiro"
   }
 }

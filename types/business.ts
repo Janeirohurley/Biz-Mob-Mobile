@@ -8,6 +8,10 @@ export interface Product {
   supplier: string; // Nom du fournisseur
   createdAt: string; // Date ISO (ex: 2025-08-27T18:57:00Z)
   updatedAt: string; // Date de dernière mise à jour
+  lastSyncTimestamp?: string; // Date ISO de la dernière sync (ex: 2025-09-15T18:00:00Z)
+  version: number; // Compteur de version, incrémenté à chaque modification
+  isDeleted?: boolean; // Pour marquer comme supprimé (défaut: false)
+  syncStatus?: 'pending' | 'synced' | 'failed'; // État de synchronisation
 }
 
 export interface SaleItem {
@@ -15,6 +19,10 @@ export interface SaleItem {
   quantity: number; // Quantité vendue
   unitPrice: number; // Prix unitaire au moment de la vente
   totalPrice: number; // Prix total (quantity * unitPrice)
+  lastSyncTimestamp?: string;
+  version: number;
+  isDeleted?: boolean;
+  syncStatus?: 'pending' | 'synced' | 'failed';
 }
 
 export interface Sale {
@@ -26,6 +34,10 @@ export interface Sale {
   paidAmount: number; // Montant payé
   debtAmount: number; // Montant dû
   date: string; // Date ISO
+  lastSyncTimestamp?: string;
+  version: number;
+  isDeleted?: boolean;
+  syncStatus?: 'pending' | 'synced' | 'failed';
 }
 
 export interface Purchase {
@@ -36,6 +48,10 @@ export interface Purchase {
   totalPrice: number; // Prix total (quantity * purchasePrice)
   supplier: string; // Nom du fournisseur
   date: string; // Date ISO
+  lastSyncTimestamp?: string;
+  version: number;
+  isDeleted?: boolean;
+  syncStatus?: 'pending' | 'synced' | 'failed';
 }
 
 export interface Client {
@@ -45,6 +61,10 @@ export interface Client {
   totalSpent: number; // Total dépensé par le client
   debtAmount: number; // Dette totale
   createdAt: string; // Date ISO
+  lastSyncTimestamp?: string;
+  version: number;
+  isDeleted?: boolean;
+  syncStatus?: 'pending' | 'synced' | 'failed';
 }
 
 export interface Debt {
@@ -54,6 +74,11 @@ export interface Debt {
   amount: number; // Montant de la dette
   createdAt: string; // Date ISO
   paymentHistory: DebtPayment[]; // Historique des paiements
+  lastSyncTimestamp?: string;
+  version: number;
+  isDeleted?: boolean;
+  syncStatus?: 'pending' | 'synced' | 'failed';
+
 }
 
 export interface DebtPayment {
@@ -75,19 +100,24 @@ export interface AuditLog {
   timestamp: string; // Date ISO (ex: 2025-08-27T18:57:00Z)
   status: 'success' | 'failure'; // Statut de l'opération
   errorMessage?: string; // Optionnel: Message d'erreur si échec
+  lastSyncTimestamp?: string;
+  version: number;
+  isDeleted?: boolean;
+  syncStatus?: 'pending' | 'synced' | 'failed';
 }
 
 // Configuration globale de l'application
 export interface AppConfig {
-  businessName: string; // Nom de l'entreprise
-  userName: string; // Nom de l'utilisateur
-  currency: string; // le nom de l'argent comme franc burundais
-  currencyCode: string;//code de l\argent comme FBU 
-  currencySymbol: string;//Symbole de devise (ex: $, €, MAD)
-  language: 'en' | 'fr' | 'es' | 'ar'; // Langue sélectionnée
-  isRTL: boolean; // Support RTL pour l'arabe
-  passwordHash: string; // Hash du mot de passe pour sécurisation locale
-  lastSyncTimestamp?:string;
+  businessName: string;
+  userName: string;
+  currency: string;
+  currencyCode: string;
+  currencySymbol: string;
+  language: 'en' | 'fr' | 'es' | 'ar';
+  isRTL: boolean;
+  passwordHash: string;
+  lastSyncTimestamp?: string; // Déjà présent
+  version: number; // Pour suivre les modifications de config
 }
 
 // Props des composants React pour une réutilisation modulaire
@@ -169,7 +199,9 @@ export interface BackupData {
   clients: Client[];
   debts: Debt[];
   config: AppConfig;
-  auditLogs: AuditLog[]; // Ajout des logs pour backup complet
+  auditLogs: AuditLog[];
+  lastSyncTimestamp?: string; // Timestamp global de la dernière sync
+  version: number; // Version du backup global
 }
 
 

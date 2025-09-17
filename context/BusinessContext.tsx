@@ -150,6 +150,10 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             setIsAuthenticated(true);
             await AsyncStorage.setItem("isAuthenticated", "true");
             logAudit({
+                version: 1,
+                isDeleted: false,
+                syncStatus: 'pending',
+                lastSyncTimestamp: undefined,
                 id: generateId(),
                 eventType: "login",
                 entityType: "config",
@@ -161,6 +165,10 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             });
         } else {
             logAudit({
+                version: 1,
+                isDeleted: false,
+                syncStatus: 'pending',
+                lastSyncTimestamp: undefined,
                 id: generateId(),
                 eventType: "login",
                 entityType: "config",
@@ -175,9 +183,14 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         return isValid;
     };
 
+
     const addProduct = (product: Product) => {
         setProducts((prev) => [...prev, product]);
         logAudit({
+            version: 1,
+            isDeleted: false,
+            syncStatus: 'pending',
+            lastSyncTimestamp: undefined,
             id: generateId(),
             eventType: "create",
             entityType: "product",
@@ -189,6 +202,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         });
     };
 
+
     const getProductById = (id: string) => {
         return products.find((p) => p.id === id);
     };
@@ -199,6 +213,10 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             prev.map((p) => (p.id === updatedProduct.id ? updatedProduct : p))
         );
         logAudit({
+            version: 1,
+            isDeleted: false,
+            syncStatus: 'pending',
+            lastSyncTimestamp: undefined,
             id: generateId(),
             eventType: "update",
             entityType: "product",
@@ -210,6 +228,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             changes: { product: { old: oldProduct || {}, new: updatedProduct } },
         });
     };
+
 
     const deleteProduct = (id: string) => {
         const product = products.find((p) => p.id === id);
@@ -228,6 +247,10 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 description: `Achat ${purchase.id} supprimé en raison de la suppression du produit ${product.name}`,
                 timestamp: new Date().toISOString(),
                 status: "success",
+                version: 1,
+                isDeleted: false,
+                syncStatus: 'pending',
+                lastSyncTimestamp: undefined,
             });
         });
 
@@ -247,6 +270,10 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 description: `Vente ${sale.id} supprimée en raison de la suppression du produit ${product.name}`,
                 timestamp: new Date().toISOString(),
                 status: "success",
+                version: 1,
+                isDeleted: false,
+                syncStatus: 'pending',
+                lastSyncTimestamp: undefined,
             });
         });
 
@@ -263,6 +290,10 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 description: `Dette ${debt.id} supprimée en raison de la suppression de la vente associée`,
                 timestamp: new Date().toISOString(),
                 status: "success",
+                version: 1,
+                isDeleted: false,
+                syncStatus: 'pending',
+                lastSyncTimestamp: undefined,
             });
         });
 
@@ -277,6 +308,10 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             description: `Produit ${product.name || id} supprimé`,
             timestamp: new Date().toISOString(),
             status: "success",
+            version: 1,
+            isDeleted: false,
+            syncStatus: 'pending',
+            lastSyncTimestamp: undefined,
         });
     };
 
@@ -294,6 +329,10 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             description: `Achat ${id} supprimé pour le produit ${purchase.productId}`,
             timestamp: new Date().toISOString(),
             status: "success",
+            version: 1,
+            isDeleted: false,
+            syncStatus: 'pending',
+            lastSyncTimestamp: undefined,
         });
     };
 
@@ -308,6 +347,10 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             description: `Vente ${sale.id} ajoutée pour un montant de ${sale.totalAmount} ${config?.currency || ""}`,
             timestamp: new Date().toISOString(),
             status: "success",
+            version: 1,
+            isDeleted: false,
+            syncStatus: 'pending',
+            lastSyncTimestamp: undefined,
         });
     };
 
@@ -328,6 +371,10 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 description: `Dette ${debt.id} supprimée en raison de la suppression de la vente ${id}`,
                 timestamp: new Date().toISOString(),
                 status: "success",
+                version: 1,
+                isDeleted: false,
+                syncStatus: 'pending',
+                lastSyncTimestamp: undefined,
             });
         });
 
@@ -344,6 +391,10 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                     )
                 );
                 logAudit({
+                    version: 1,
+                    isDeleted: false,
+                    syncStatus: 'pending',
+                    lastSyncTimestamp: undefined,
                     id: generateId(),
                     eventType: "update",
                     entityType: "client",
@@ -373,6 +424,10 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             description: `Vente ${id} supprimée`,
             timestamp: new Date().toISOString(),
             status: "success",
+            version: 1,
+            isDeleted: false,
+            syncStatus: 'pending',
+            lastSyncTimestamp: undefined,
         });
     };
     const addPurchase = (purchase: Purchase) => {
@@ -393,6 +448,10 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             description: `Achat ${purchase.id} ajouté pour le produit ${purchase.productId}`,
             timestamp: new Date().toISOString(),
             status: "success",
+            version: 1,
+            isDeleted: false,
+            syncStatus: 'pending',
+            lastSyncTimestamp: undefined,
         });
     };
 
@@ -407,6 +466,10 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             description: `Client ${client.name} ajouté`,
             timestamp: new Date().toISOString(),
             status: "success",
+            version: 1,
+            isDeleted: false,
+            syncStatus: 'pending',
+            lastSyncTimestamp: undefined,
         });
     };
 
@@ -423,6 +486,10 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             timestamp: new Date().toISOString(),
             status: "success",
             changes: { client: { old: oldClient || {}, new: updatedClient } },
+            version: 1,
+            isDeleted: false,
+            syncStatus: 'pending',
+            lastSyncTimestamp: undefined,
         });
     };
 
@@ -444,6 +511,10 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 description: `Vente ${sale.id} supprimée en raison de la suppression du client ${client.name}`,
                 timestamp: new Date().toISOString(),
                 status: "success",
+                version: 1,
+                isDeleted: false,
+                syncStatus: 'pending',
+                lastSyncTimestamp: undefined,
             });
         });
 
@@ -460,6 +531,10 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 description: `Dette ${debt.id} supprimée en raison de la suppression du client ${client.name} ou de la vente associée`,
                 timestamp: new Date().toISOString(),
                 status: "success",
+                version: 1,
+                isDeleted: false,
+                syncStatus: 'pending',
+                lastSyncTimestamp: undefined,
             });
         });
 
@@ -474,6 +549,10 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             description: `Client ${client.name || id} supprimé`,
             timestamp: new Date().toISOString(),
             status: "success",
+                     version: 1,
+            isDeleted: false,
+            syncStatus: 'pending',
+            lastSyncTimestamp: undefined,
         });
     };
 
@@ -488,6 +567,10 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             description: `Dette ${debt.id} ajoutée pour le client ${debt.clientId}`,
             timestamp: new Date().toISOString(),
             status: "success",
+                     version: 1,
+            isDeleted: false,
+            syncStatus: 'pending',
+            lastSyncTimestamp: undefined,
         });
     };
 
@@ -512,6 +595,10 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             description: `Dette ${id} supprimée pour le client ${debt.clientId}`,
             timestamp: new Date().toISOString(),
             status: "success",
+            version: 1,
+            isDeleted: false,
+            syncStatus: 'pending',
+            lastSyncTimestamp: undefined,
         });
     };
 
@@ -549,6 +636,10 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             description: `Paiement ${payment.id} ajouté pour la dette ${payment.debtId}`,
             timestamp: new Date().toISOString(),
             status: "success",
+            version: 1,
+            isDeleted: false,
+            syncStatus: 'pending',
+            lastSyncTimestamp: undefined,
         });
     };
 
@@ -586,6 +677,10 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             description: `Paiement ${paymentId} supprimé pour la dette ${debtId}`,
             timestamp: new Date().toISOString(),
             status: "success",
+            version: 1,
+            isDeleted: false,
+            syncStatus: 'pending',
+            lastSyncTimestamp: undefined,
         });
     };
 
@@ -602,6 +697,10 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 description: "Déconnexion de l'utilisateur",
                 timestamp: new Date().toISOString(),
                 status: "success",
+                version: 1,
+                isDeleted: false,
+                syncStatus: 'pending',
+                lastSyncTimestamp: undefined,
             });
         } catch (error) {
             console.error("Erreur lors de la déconnexion:", error);
@@ -609,8 +708,9 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
     const updateConfig = (newConfig: Partial<AppConfig>) => {
         setConfig((prev) => {
-            // Ensure all required fields are present, fallback to previous or empty string/default
             const updatedConfig: AppConfig = {
+                version: (prev?.version ?? 0) + 1, // incrémente automatiquement
+                lastSyncTimestamp: undefined,
                 businessName: newConfig.businessName ?? prev?.businessName ?? "",
                 userName: newConfig.userName ?? prev?.userName ?? "",
                 currency: newConfig.currency ?? prev?.currency ?? "",
@@ -623,7 +723,12 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             AsyncStorage.setItem('config', JSON.stringify(updatedConfig));
             return updatedConfig;
         });
+
         logAudit({
+            version: 1,
+            isDeleted: false,
+            syncStatus: 'pending',
+            lastSyncTimestamp: undefined,
             id: generateId(),
             eventType: "update",
             entityType: "config",
@@ -635,6 +740,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             changes: { config: { old: config, new: newConfig } },
         });
     };
+
 
     const importData = async (data: BackupData) => {
         try {
@@ -661,6 +767,10 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 description: "Données importées avec succès",
                 timestamp: new Date().toISOString(),
                 status: "success",
+                version: 1,
+                isDeleted: false,
+                syncStatus: 'pending',
+                lastSyncTimestamp: undefined,
             });
         } catch (error) {
             logAudit({
@@ -673,6 +783,10 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 timestamp: new Date().toISOString(),
                 status: "failure",
                 errorMessage: String(error),
+                version: 1,
+                isDeleted: false,
+                syncStatus: 'pending',
+                lastSyncTimestamp: undefined,
             });
             throw error;
         }

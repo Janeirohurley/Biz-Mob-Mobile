@@ -30,7 +30,13 @@ export default function AddOrEditProduct() {
     salePrice: "",
     stock: "",
     supplier: "",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    version: 1,
+    isDeleted: false,
+    syncStatus: 'pending',
   });
+
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -46,11 +52,17 @@ export default function AddOrEditProduct() {
           salePrice: String(product.salePrice),
           stock: String(product.stock),
           supplier: product.supplier,
+          createdAt: product.createdAt,
+          updatedAt: product.updatedAt,
+          version: product.version,
+          isDeleted: product.isDeleted ?? false,
+          syncStatus: product.syncStatus ?? 'pending',
         });
         setSelectedDate(new Date(product.createdAt));
       }
     }
-  }, [id]);
+  }, [editing, id]);
+
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
@@ -82,6 +94,8 @@ export default function AddOrEditProduct() {
   const handleSave = () => {
     if (!validate()) return;
 
+    const timestamp = new Date().toISOString();
+
     if (editing && id) {
       const updatedProduct: Product = {
         id,
@@ -90,8 +104,11 @@ export default function AddOrEditProduct() {
         salePrice: Number(formData.salePrice),
         stock: Number(formData.stock),
         supplier: formData.supplier.trim(),
-        createdAt: selectedDate.toISOString(),
-        updatedAt: new Date().toISOString(),
+        createdAt: formData.createdAt || timestamp, // garder la date de création originale
+        updatedAt: timestamp,
+        version: formData.version + 1 || 1, // incrémenter la version
+        isDeleted: formData.isDeleted || false,
+        syncStatus: 'pending', // nouveau changement non synchronisé
       };
       updateProduct(updatedProduct);
       Alert.alert("Success", "Product updated successfully!", [
@@ -105,8 +122,11 @@ export default function AddOrEditProduct() {
         salePrice: Number(formData.salePrice),
         stock: Number(formData.stock),
         supplier: formData.supplier.trim(),
-        createdAt: selectedDate.toISOString(),
-        updatedAt: new Date().toISOString(),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+        version: 1,
+        isDeleted: false,
+        syncStatus: 'pending',
       };
       addProduct(newProduct);
       Alert.alert("Success", "Product added successfully!", [
@@ -114,6 +134,7 @@ export default function AddOrEditProduct() {
       ]);
     }
   };
+
 
   const profit = Number(formData.salePrice) - Number(formData.purchasePrice);
   const profitMargin =

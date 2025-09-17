@@ -204,6 +204,8 @@ export default function SignupScreen() {
     setIsSubmitting(true);
     try {
       setConfig({
+        version: 1,
+        lastSyncTimestamp: undefined,
         businessName: formData.businessName.trim(),
         userName: formData.userName.trim(),
         passwordHash,
@@ -217,6 +219,7 @@ export default function SignupScreen() {
     } finally {
       setIsSubmitting(false);
     }
+
   };
 
   return (
