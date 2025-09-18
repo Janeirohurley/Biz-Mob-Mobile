@@ -239,7 +239,7 @@ export default function Dashboard() {
           ) : (
             <SectionList
                 sections={groupByDate({
-                  items: historyItems.slice(0, 10),
+                  items: filteredItems,
                   dateField: "date",
                   locale: "fr-FR",
                 })}

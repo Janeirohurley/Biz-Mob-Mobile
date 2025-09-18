@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Platform,
   SectionList,
@@ -20,14 +20,14 @@ import EmptyState from "@/components/EmptyState";
 
 
 export default function History() {
-  const { sales, purchases, debts, auditLogs, config, clients, products } = useBusiness();
+  const { sales, purchases, debts, config, clients, products } = useBusiness();
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedFilter, setSelectedFilter] = useState<'all' | 'sales' | 'purchases' | 'payments' | 'audit'>('all');
+  const [selectedFilter, setSelectedFilter] = useState<'all' | 'sale' | 'purchase' | 'payment'>('all');
 
 
 
   const historyItems = createHistoryItems(
-    { sales, purchases, debts, auditLogs, clients, products }
+    { sales, purchases, debts, clients, products }
   );
 
   const filteredItems = filterItems<HistoryItem>({
@@ -37,13 +37,14 @@ export default function History() {
     typeField: "type",
     searchFields: ["title", "subtitle", "status"],
     filterMapping: {
-      sales: "sale",
-      purchases: "purchase",
-      payments: "payment",
+      sale: "sale",
+      purchase: "purchase",
+      payment: "payment",
       audit: "audit",
     },
+    start:0,
+    end:10
   });
-
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -57,8 +58,8 @@ export default function History() {
 
       {/* Filter Tabs */}
 
-      <FilterTabs<'all' | 'sales' | 'purchases' | 'payments' | 'audit'>
-        options={["all", "sales", "purchases", "payments", "audit"]}
+      <FilterTabs<'all' | 'sale' | 'purchase' | 'payment' >
+        options={["all", "sale", "purchase", "payment"]}
         selected={selectedFilter}
         onSelect={(filter) => setSelectedFilter(filter)}
       />
@@ -75,7 +76,7 @@ export default function History() {
       ) : (
         <SectionList
           sections={groupByDate({
-            items: historyItems,
+            items: filteredItems,
             dateField: "date",
             locale: "fr-FR",
           })}

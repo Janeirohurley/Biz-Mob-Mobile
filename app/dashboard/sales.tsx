@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -11,12 +11,15 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useBusiness } from "../../context/BusinessContext";
-import { Sale } from "../../types/business";
+import { Product, Sale } from "../../types/business";
 import { useRouter } from "expo-router";
 import Header from "@/components/header";
+import FilterFAB from "@/components/ProductFilterFAB";
 
 export default function Sales() {
   const { sales, config, clients, products } = useBusiness();
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [LocalSales, SetLocalSales] = useState<Sale[]>(sales);
   const router = useRouter();
   const getClientName = (clientId: string | null) => {
     if (!clientId) return "Walk-in Customer";
@@ -111,20 +114,20 @@ export default function Sales() {
   };
 
   // Calculs statistiques
-  const totalSales = sales.reduce((sum, sale) => sum + sale.totalAmount, 0);
-  const paidSales = sales.reduce((sum, sale) => sum + sale.paidAmount, 0);
-  const outstandingSales = sales.reduce((sum, sale) => sum + sale.debtAmount, 0);
-  const averageSale = sales.length > 0 ? totalSales / sales.length : 0;
+  const totalSales = LocalSales.reduce((sum, sale) => sum + sale.totalAmount, 0);
+  const paidSales = LocalSales.reduce((sum, sale) => sum + sale.paidAmount, 0);
+  const outstandingSales = LocalSales.reduce((sum, sale) => sum + sale.debtAmount, 0);
+  const averageSale = LocalSales.length > 0 ? totalSales / LocalSales.length : 0;
 
   // Ventes par statut
-  const paidSalesCount = sales.filter(s => s.paymentStatus === 'full').length;
-  const unpaidSalesCount = sales.filter(s => s.paymentStatus === 'debt').length;
-  const partialSalesCount = sales.filter(s => s.paymentStatus === 'partial').length;
+  const paidSalesCount = LocalSales.filter(s => s.paymentStatus === 'full').length;
+  const unpaidSalesCount = LocalSales.filter(s => s.paymentStatus === 'debt').length;
+  const partialSalesCount = LocalSales.filter(s => s.paymentStatus === 'partial').length;
   // Fonction utilitaire pour grouper par date (au format yyyy-mm-dd)
-  const groupSalesByDate = (sales: Sale[]) => {
+  const groupSalesByDate = (LocalSales: Sale[]) => {
     const groups: { [date: string]: Sale[] } = {};
 
-    sales.forEach(sale => {
+    LocalSales.forEach(sale => {
       const dateKey = new Date(sale.date).toISOString().split("T")[0]; // ex: 2025-09-03
       if (!groups[dateKey]) groups[dateKey] = [];
       groups[dateKey].push(sale);
@@ -143,6 +146,19 @@ export default function Sales() {
         data: groups[dateKey].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
       }));
   };
+
+  useEffect(() => {
+    // filtre les sales par produit si un produit est sélectionné
+    if (selectedProductId) {
+      const filtered = sales.filter((sale) =>
+        sale.items.some((item) => item.productId === selectedProductId)
+      );
+      SetLocalSales(filtered)
+    } else {
+      SetLocalSales(sales)
+    }
+    
+  }, [selectedProductId])
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <Header title="Sales" showBack={false} right={
@@ -180,7 +196,7 @@ export default function Sales() {
 
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{sales.length}</Text>
+            <Text style={styles.statValue}>{LocalSales.length}</Text>
             <Text style={styles.statLabel}>Total Sales</Text>
           </View>
           {/* <View style={styles.statItem}>
@@ -204,7 +220,7 @@ export default function Sales() {
         </View>
       </View>
 
-      {sales.length === 0 ? (
+      {LocalSales.length === 0 ? (
         <View style={styles.emptyState}>
           <Ionicons name="trending-up-outline" size={64} color="#CBD5E1" />
           <Text style={styles.emptyTitle}>No Sales Yet</Text>
@@ -212,7 +228,7 @@ export default function Sales() {
         </View>
       ) : (
         <SectionList
-          sections={groupSalesByDate(sales)}
+          sections={groupSalesByDate(LocalSales)}
           keyExtractor={(item) => item.id}
           renderItem={renderSale}
           renderSectionHeader={({ section: { title } }) => (
@@ -222,6 +238,14 @@ export default function Sales() {
           showsVerticalScrollIndicator={false}
         />
       )}
+      <FilterFAB<Product>
+        items={products}
+        selectedId={selectedProductId}
+        onSelect={(id) => setSelectedProductId(id)}
+        getId={(p) => p.id}
+        getLabel={(p) => p.name}
+        title="Filter by Product"
+      />
 
     </SafeAreaView>
   );

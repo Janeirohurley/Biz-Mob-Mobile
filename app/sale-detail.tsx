@@ -71,24 +71,22 @@ export default function SaleDetail() {
                         <TouchableOpacity
                             style={styles.editButton}
                             onPress={() => router.push({ pathname: "/add-sale", params: { saleId } })}
-                            activeOpacity={0.6}
-                            accessibilityLabel="Edit sale"
                         >
-                            <Ionicons name="create-outline" size={24} color="#007AFF" />
+                            <Ionicons name="create-outline" size={22} color="#007AFF" />
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={styles.deleteButton}
                             onPress={handleDeleteSale}
-                            activeOpacity={0.6}
-                            accessibilityLabel={`Delete sale ${sale.id.slice(-4).toUpperCase()}`}
                         >
-                            <Ionicons name="trash-outline" size={24} color="#FFFFFF" />
+                            <Ionicons name="trash-outline" size={22} color="#FFFFFF" />
                         </TouchableOpacity>
                     </View>
                 }
             />
+
             <ScrollView contentContainerStyle={styles.content}>
                 <View style={styles.saleCard}>
+                    {/* Infos Client et Montant */}
                     <View style={styles.saleHeader}>
                         <View style={styles.saleLeft}>
                             <Text style={styles.clientName}>{getClientName(sale.clientId)}</Text>
@@ -103,25 +101,15 @@ export default function SaleDetail() {
                         </View>
                         <View style={styles.saleRight}>
                             <Text style={styles.saleAmount}>
-                                {config?.currencySymbol || "$"}
-                                {sale.totalAmount.toLocaleString()}
+                                {config?.currencySymbol || "$"}{sale.totalAmount.toLocaleString()}
                             </Text>
-                            <View
-                                style={[
-                                    styles.statusBadge,
-                                    sale.paymentStatus === "full" && styles.paidBadge,
-                                    sale.paymentStatus === "debt" && styles.debtBadge,
-                                    sale.paymentStatus === "partial" && styles.partialBadge,
-                                ]}
-                            >
-                                <Text
-                                    style={[
-                                        styles.statusText,
-                                        sale.paymentStatus === "full" && styles.paidText,
-                                        sale.paymentStatus === "debt" && styles.debtText,
-                                        sale.paymentStatus === "partial" && styles.partialText,
-                                    ]}
-                                >
+                            <View style={[
+                                styles.statusBadge,
+                                sale.paymentStatus === "full" && styles.paidBadge,
+                                sale.paymentStatus === "debt" && styles.debtBadge,
+                                sale.paymentStatus === "partial" && styles.partialBadge,
+                            ]}>
+                                <Text style={styles.statusText}>
                                     {sale.paymentStatus === "full"
                                         ? "Paid"
                                         : sale.paymentStatus === "debt"
@@ -132,36 +120,36 @@ export default function SaleDetail() {
                         </View>
                     </View>
 
-                    {/* Items Section */}
+                    {/* Liste des Produits */}
                     <View style={styles.itemsSection}>
                         <Text style={styles.itemsTitle}>
                             {itemsCount} item{itemsCount !== 1 ? "s" : ""}:
                         </Text>
-                        {sale.items.map((saleItem, index) => (
-                            <Text key={index} style={styles.itemText}>
-                                {saleItem.quantity}x {getProductName(saleItem.productId)} @{" "}
-                                {config?.currencySymbol || "$"}
-                                {saleItem.unitPrice.toLocaleString()} - {config?.currencySymbol || "$"}
-                                {saleItem.totalPrice.toLocaleString()}
-                            </Text>
+                        {sale.items.map((item, index) => (
+                            <View key={index} style={styles.itemRow}>
+                                <Text style={styles.itemName}>
+                                    {item.quantity}× {getProductName(item.productId)}
+                                </Text>
+                                <Text style={styles.itemPrice}>
+                                    {config?.currencySymbol || "$"}{item.totalPrice.toLocaleString()}
+                                </Text>
+                            </View>
                         ))}
                     </View>
 
-                    {/* Payment Info */}
+                    {/* Paiement */}
                     {sale.paymentStatus !== "full" && (
                         <View style={styles.paymentInfo}>
                             <View style={styles.paymentRow}>
                                 <Text style={styles.paymentLabel}>Paid:</Text>
                                 <Text style={styles.paymentValue}>
-                                    {config?.currencySymbol || "$"}
-                                    {sale.paidAmount.toLocaleString()}
+                                    {config?.currencySymbol || "$"}{sale.paidAmount.toLocaleString()}
                                 </Text>
                             </View>
                             <View style={styles.paymentRow}>
                                 <Text style={styles.paymentLabel}>Outstanding:</Text>
                                 <Text style={[styles.paymentValue, { color: "#FF3B30" }]}>
-                                    {config?.currencySymbol || "$"}
-                                    {sale.debtAmount.toLocaleString()}
+                                    {config?.currencySymbol || "$"}{sale.debtAmount.toLocaleString()}
                                 </Text>
                             </View>
                         </View>
@@ -169,6 +157,7 @@ export default function SaleDetail() {
                 </View>
             </ScrollView>
         </SafeAreaView>
+
     );
 }
 
@@ -178,105 +167,116 @@ const styles = StyleSheet.create({
         backgroundColor: "#F2F2F7",
     },
     content: {
-        paddingHorizontal: 20,
-        paddingBottom: 20,
+        paddingHorizontal: 16,
+        paddingVertical: 20,
     },
     saleCard: {
         backgroundColor: "#FFFFFF",
         borderRadius: 12,
         padding: 16,
         marginBottom: 12,
+        shadowColor: "white",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0,
+        shadowRadius: 4,
+        elevation: 2,
     },
+
+    // HEADER (client + date + montant + statut)
     saleHeader: {
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "flex-start",
-        marginBottom: 12,
+        marginBottom: 16,
     },
     saleLeft: {
         flex: 1,
     },
     clientName: {
-        fontSize: 15,
+        fontSize: 16,
+        fontWeight: "600",
         color: "#007AFF",
         marginBottom: 4,
     },
     saleDate: {
-        fontSize: 12,
+        fontSize: 13,
         color: "#8E8E93",
     },
     saleRight: {
         alignItems: "flex-end",
     },
     saleAmount: {
-        fontSize: 15,
-        fontWeight: "600",
-        color: "#000000",
+        fontSize: 18,
+        fontWeight: "700",
+        color: "#111827",
         marginBottom: 6,
     },
     statusBadge: {
-        paddingHorizontal: 8,
+        paddingHorizontal: 10,
         paddingVertical: 4,
         borderRadius: 12,
     },
-    paidBadge: {
-        backgroundColor: "#34C759",
-    },
-    debtBadge: {
-        backgroundColor: "#FF3B30",
-    },
-    partialBadge: {
-        backgroundColor: "#FF9500",
-    },
+    paidBadge: { backgroundColor: "#34C759" },
+    debtBadge: { backgroundColor: "#FF3B30" },
+    partialBadge: { backgroundColor: "#FF9500" },
     statusText: {
-        fontSize: 10,
+        fontSize: 11,
         fontWeight: "600",
-    },
-    paidText: {
         color: "#FFFFFF",
+        textTransform: "uppercase",
     },
-    debtText: {
-        color: "#FFFFFF",
-    },
-    partialText: {
-        color: "#FFFFFF",
-    },
+
+    // PRODUITS
     itemsSection: {
-        marginBottom: 12,
+        marginBottom: 16,
         paddingTop: 12,
         borderTopWidth: 1,
         borderTopColor: "#F2F2F7",
     },
     itemsTitle: {
-        fontSize: 13,
-        fontWeight: "500",
-        color: "#000000",
+        fontSize: 14,
+        fontWeight: "600",
+        color: "#374151",
+        marginBottom: 8,
+    },
+    itemRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
         marginBottom: 6,
     },
-    itemText: {
-        fontSize: 12,
-        color: "#8E8E93",
-        marginBottom: 2,
+    itemName: {
+        fontSize: 14,
+        color: "#111827",
     },
+    itemPrice: {
+        fontSize: 14,
+        fontWeight: "500",
+        color: "#374151",
+    },
+
+    // PAIEMENT
     paymentInfo: {
         paddingTop: 12,
         borderTopWidth: 1,
         borderTopColor: "#F2F2F7",
+        marginTop: 8,
     },
     paymentRow: {
         flexDirection: "row",
         justifyContent: "space-between",
-        marginBottom: 4,
+        marginBottom: 6,
     },
     paymentLabel: {
-        fontSize: 15,
-        color: "#8E8E93",
+        fontSize: 14,
+        color: "#6B7280",
     },
     paymentValue: {
-        fontSize: 15,
-        fontWeight: "500",
-        color: "#000000",
+        fontSize: 14,
+        fontWeight: "600",
+        color: "#111827",
     },
+
+    // EMPTY STATE
     emptyState: {
         flex: 1,
         alignItems: "center",
@@ -291,10 +291,12 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
     emptyText: {
-        fontSize: 16,
+        fontSize: 15,
         color: "#64748B",
         textAlign: "center",
     },
+
+    // ACTION BUTTONS
     actionButtons: {
         flexDirection: "row",
         gap: 8,
@@ -307,6 +309,10 @@ const styles = StyleSheet.create({
         backgroundColor: "#FFFFFF",
         alignItems: "center",
         justifyContent: "center",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
     },
     deleteButton: {
         width: 40,
@@ -315,5 +321,9 @@ const styles = StyleSheet.create({
         backgroundColor: "#FF3B30",
         alignItems: "center",
         justifyContent: "center",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
     },
 });

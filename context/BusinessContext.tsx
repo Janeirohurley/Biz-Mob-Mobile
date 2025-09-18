@@ -12,7 +12,6 @@ import {
     Purchase,
     Sale,
 } from "../types/business";
-
 interface BusinessContextType {
     config?: AppConfig;
     setConfig: React.Dispatch<React.SetStateAction<AppConfig | undefined>>;
@@ -549,7 +548,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             description: `Client ${client.name || id} supprimé`,
             timestamp: new Date().toISOString(),
             status: "success",
-                     version: 1,
+            version: 1,
             isDeleted: false,
             syncStatus: 'pending',
             lastSyncTimestamp: undefined,
@@ -567,7 +566,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             description: `Dette ${debt.id} ajoutée pour le client ${debt.clientId}`,
             timestamp: new Date().toISOString(),
             status: "success",
-                     version: 1,
+            version: 1,
             isDeleted: false,
             syncStatus: 'pending',
             lastSyncTimestamp: undefined,
@@ -861,6 +860,8 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             }}
         >
             {children}
+
+            
         </BusinessContext.Provider>
     );
 };

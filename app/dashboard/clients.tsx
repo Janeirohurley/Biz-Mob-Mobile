@@ -125,11 +125,7 @@ export default function Clients() {
   const totalClients = clients.length;
   const clientsWithDebt = clients.filter(c => getOutstandingDebt(c.id) > 0).length;
   const totalDebt = clients.reduce((sum, client) => sum + getOutstandingDebt(client.id), 0);
-  const totalRevenue = clients.reduce((sum, client) => sum + client.totalSpent, 0);
-  const averageSpending = clients.length > 0 ? totalRevenue / clients.length : 0;
 
-  // Top clients
-  const topClients = [...clients].sort((a, b) => b.totalSpent - a.totalSpent).slice(0, 3);
 
   const filteredItems = filterItems<Client>({
     items: clients,
@@ -187,6 +183,7 @@ export default function Clients() {
           showsVerticalScrollIndicator={false}
         />
       )}
+
     </SafeAreaView>
   );
 }

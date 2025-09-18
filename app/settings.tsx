@@ -40,7 +40,6 @@ export default function Settings() {
   const handleOpenModal = () => setModalVisibleUrl(true);
 
   // Fonction de synchronisation des données
-  // Fonction de synchronisation des données
   const handleSyncData = async (
     endpoint?: string,
     updateProgress?: (p: number) => void
@@ -157,7 +156,7 @@ export default function Settings() {
       });
       advance();
 
-      // 5. Envoyer la fusion au serveur
+      // 5. Envoyer lu serva fusion aeur
       await axios.post(`${syncUrl}/sync`, mergedData, {
         headers: { "Content-Type": "application/json" },
       });
@@ -166,25 +165,26 @@ export default function Settings() {
       // 6. Terminé
       Alert.alert("Success", "Data synced successfully (merged)!");
       advance();
+      router.push('/')
     } catch (error) {
       console.error("Sync error:", error);
       Alert.alert(
         "Error",
         "Failed to sync data. Please check your internet connection and try again."
       );
+
     } finally {
+      if (updateProgress) {
+
+        updateProgress(0)
+      }
       setIsSyncing(false);
     }
   };
 
 
 
-  const handleConfirmUrl = (url: string) => {
-    setModalVisibleUrl(false);
-    handleSyncData(url); // passe l’URL saisie à ta fonction de sync
-  };
 
- 
 
   const handleReset = async () => {
     try {

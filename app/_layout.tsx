@@ -69,9 +69,8 @@ const RootNavigation = () => {
         <Stack.Screen name="reports" />
         <Stack.Screen name="history" />
         <Stack.Screen name="settings" />
-        <Stack.Screen name="edit-product" />
         <Stack.Screen name="sale-detail" />
-        <Stack.Screen name="add-sale" />
+        <Stack.Screen name="add-sale" /> 
         <Stack.Screen name="debts" />
 
       </Stack>
