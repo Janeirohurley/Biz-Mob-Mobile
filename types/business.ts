@@ -6,6 +6,7 @@ export interface Product {
   salePrice: number; // Prix de vente
   stock: number; // Quantité en stock
   supplier: string; // Nom du fournisseur
+  initiStock?:number//le stock intialise
   createdAt: string; // Date ISO (ex: 2025-08-27T18:57:00Z)
   updatedAt: string; // Date de dernière mise à jour
   lastSyncTimestamp?: string; // Date ISO de la dernière sync (ex: 2025-09-15T18:00:00Z)

@@ -1,0 +1,45 @@
+stages:
+  - build
+  - release
+
+variables:
+  ANDROID_SDK_ROOT: "$CI_PROJECT_DIR/Android"
+  JAVA_HOME: "/usr/lib/jvm/java-17-openjdk-amd64"
+
+# ✅ Build APK quand on push un tag v*
+build-android:
+  stage: build
+  image: openjdk:17
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^v.*/'   # Exécute uniquement si c'est un tag commençant par v
+  before_script:
+    - apt-get update && apt-get install -y wget unzip nodejs npm
+  script:
+    - npm install
+    - npm run prebuild
+    - mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
+    - wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
+    - unzip cmdline-tools.zip -d $ANDROID_SDK_ROOT/cmdline-tools
+    - yes | $ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT "platform-tools" "platforms;android-33" "build-tools;33.0.2"
+    - cd android && chmod +x ./gradlew && ./gradlew clean assembleRelease
+  artifacts:
+    paths:
+      - android/app/build/outputs/apk/release/*.apk
+    expire_in: 1 week
+
+# ✅ Créer une release GitLab et attacher les APKs
+release:
+  stage: release
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^v.*/'   # Exécute uniquement si c'est un tag commençant par v
+  script:
+    - echo "Création de la release $CI_COMMIT_TAG"
+  release:
+    name: "Release $CI_COMMIT_TAG"
+    tag_name: "$CI_COMMIT_TAG"
+    description: "📦 Build Android pour $CI_COMMIT_TAG"
+    assets:
+      links:
+        - name: "APK Release"
+          url: "${CI_PROJECT_URL}/-/jobs/${CI_JOB_ID}/artifacts/file/android/app/build/outputs/apk/release/app-release.apk"

@@ -17,16 +17,16 @@ export default function Products() {
   const { products, config } = useBusiness();
   const router = useRouter();
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
-  const [LocalSales, SetLocalProducts] = useState<Product[]>(products);
+  const [LocalProducts, SetLocalProducts] = useState<Product[]>(products);
 
   const renderProduct = ({ item }: { item: Product }) => {
     const profit = item.salePrice - item.purchasePrice;
     const profitMargin = ((profit / item.purchasePrice) * 100).toFixed(1);
     const totalValue = item.stock * item.purchasePrice;
-    
+
     return (
-      <TouchableOpacity 
-        style={styles.productCard} 
+      <TouchableOpacity
+        style={styles.productCard}
         activeOpacity={0.6}
         onPress={() => router.push({ pathname: "/product-details", params: { id: item.id } })}
       >
@@ -38,7 +38,7 @@ export default function Products() {
             </Text>
           </View>
         </View>
-        
+
         <View style={styles.priceRow}>
           <View style={styles.priceItem}>
             <Text style={styles.priceLabel}>Cost</Text>
@@ -59,16 +59,16 @@ export default function Products() {
             </Text>
           </View>
         </View>
-        
+
         <View style={styles.productFooter}>
           <Text style={styles.marginText}>
             Margin: {profitMargin}%
           </Text>
           <Text style={styles.valueText}>
-            Stock Value: {config?.currencySymbol || "$"}{totalValue.toLocaleString()}
+            Stock remaining: {config?.currencySymbol || "$"}{totalValue.toLocaleString()}
           </Text>
         </View>
-        
+
         <Text style={styles.dateText}>
           Added: {new Date(item.createdAt).toLocaleDateString()}
         </Text>
@@ -76,17 +76,20 @@ export default function Products() {
     );
   };
 
-  const totalStockValue = LocalSales.reduce((sum, product) => 
+  const totalStockValue = LocalProducts.reduce((sum, product) =>
     sum + (product.stock * product.purchasePrice), 0
   );
-  
-  const lowStockCount = LocalSales.filter(p => p.stock < 10).length;
-  const outOfStockCount = LocalSales.filter(p => p.stock === 0).length;
+  const totalMoneyStock = LocalProducts.reduce((sum, product) =>
+    sum + (product.stock * product.salePrice), 0
+  );
+
+  const lowStockCount = LocalProducts.filter(p => p.stock < 10).length;
+  const outOfStockCount = LocalProducts.filter(p => p.stock === 0).length;
   useEffect(() => {
     // filtre les sales par produit si un produit est sélectionné
     if (selectedProductId) {
       const filtered = products.filter((product) =>
-       product.id === selectedProductId
+        product.id === selectedProductId
       );
       SetLocalProducts(filtered)
     } else {
@@ -111,7 +114,7 @@ export default function Products() {
       <View style={styles.summarySection}>
         <View style={styles.summaryRow}>
           <View style={styles.summaryCard}>
-            <Text style={styles.summaryValue}>{LocalSales.length}</Text>
+            <Text style={styles.summaryValue}>{LocalProducts.length}</Text>
             <Text style={styles.summaryLabel}>Total Products</Text>
           </View>
           <View style={styles.summaryCard}>
@@ -127,16 +130,16 @@ export default function Products() {
             <Text style={styles.summaryLabel}>Out of Stock</Text>
           </View>
         </View>
-        
+
         <View style={styles.valueCard}>
-          <Text style={styles.valueLabel}>Total Stock Value</Text>
+          <Text style={styles.valueLabel}>Total Stock Remaining</Text>
           <Text style={styles.totalValue}>
             {config?.currencySymbol || "$"}{totalStockValue.toLocaleString()}
           </Text>
         </View>
       </View>
 
-      {LocalSales.length === 0 ? (
+      {LocalProducts.length === 0 ? (
         <View style={styles.emptyState}>
           <Ionicons name="cube-outline" size={64} color="#CBD5E1" />
           <Text style={styles.emptyTitle}>No Products Yet</Text>
@@ -144,7 +147,7 @@ export default function Products() {
         </View>
       ) : (
         <FlatList
-          data={LocalSales}
+          data={LocalProducts}
           renderItem={renderProduct}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}

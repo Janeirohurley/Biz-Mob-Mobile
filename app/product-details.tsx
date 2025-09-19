@@ -55,7 +55,7 @@ export default function ProductDetails() {
   };
 
   const profit = product.salePrice - product.purchasePrice;
-  const profitMargin = ((profit / product.purchasePrice) * 100).toFixed(1);
+  const profitMargin = product.initiStock?product.initiStock:'N/A' 
   const totalValue = product.stock * product.purchasePrice;
 
   // récupérer les achats liés à ce produit
@@ -115,7 +115,7 @@ export default function ProductDetails() {
               value={`${config?.currencySymbol || "$"}${profit.toLocaleString()}`}
               color="#34C759"
             />
-            <Stat label="Margin" value={`${profitMargin}%`} color="#5856D6" />
+            <Stat label="Total" value={`${config?.currencySymbol}${profitMargin}`} color="#5856D6" />
           </View>
         </View>
 
@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", justifyContent: "space-between" },
   rowWrap: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" },
   statLabel: { fontSize: 13, color: "#8E8E93", marginBottom: 4 },
-  statValue: { fontSize: 17, fontWeight: "600", color: "#111" },
+  statValue: { fontSize: 13, fontWeight: "600", color: "#111" },
   supplierInfo: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   supplierName: { fontSize: 16, fontWeight: "500", color: "#111" },
   secondaryButton: {

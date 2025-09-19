@@ -121,6 +121,7 @@ export default function AddOrEditProduct() {
         purchasePrice: Number(formData.purchasePrice),
         salePrice: Number(formData.salePrice),
         stock: Number(formData.stock),
+        initiStock:Number(formData.stock),
         supplier: formData.supplier.trim(),
         createdAt: timestamp,
         updatedAt: timestamp,
