@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   FlatList,
   StyleSheet,
@@ -11,10 +11,13 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useBusiness } from "../../context/BusinessContext";
 import { Product } from "../../types/business";
+import FilterFAB from "@/components/ProductFilterFAB";
 
 export default function Products() {
   const { products, config } = useBusiness();
   const router = useRouter();
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [LocalSales, SetLocalProducts] = useState<Product[]>(products);
 
   const renderProduct = ({ item }: { item: Product }) => {
     const profit = item.salePrice - item.purchasePrice;
@@ -73,13 +76,24 @@ export default function Products() {
     );
   };
 
-  const totalStockValue = products.reduce((sum, product) => 
+  const totalStockValue = LocalSales.reduce((sum, product) => 
     sum + (product.stock * product.purchasePrice), 0
   );
   
-  const lowStockCount = products.filter(p => p.stock < 10).length;
-  const outOfStockCount = products.filter(p => p.stock === 0).length;
+  const lowStockCount = LocalSales.filter(p => p.stock < 10).length;
+  const outOfStockCount = LocalSales.filter(p => p.stock === 0).length;
+  useEffect(() => {
+    // filtre les sales par produit si un produit est sélectionné
+    if (selectedProductId) {
+      const filtered = products.filter((product) =>
+       product.id === selectedProductId
+      );
+      SetLocalProducts(filtered)
+    } else {
+      SetLocalProducts(products)
+    }
 
+  }, [selectedProductId])
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
@@ -97,7 +111,7 @@ export default function Products() {
       <View style={styles.summarySection}>
         <View style={styles.summaryRow}>
           <View style={styles.summaryCard}>
-            <Text style={styles.summaryValue}>{products.length}</Text>
+            <Text style={styles.summaryValue}>{LocalSales.length}</Text>
             <Text style={styles.summaryLabel}>Total Products</Text>
           </View>
           <View style={styles.summaryCard}>
@@ -122,7 +136,7 @@ export default function Products() {
         </View>
       </View>
 
-      {products.length === 0 ? (
+      {LocalSales.length === 0 ? (
         <View style={styles.emptyState}>
           <Ionicons name="cube-outline" size={64} color="#CBD5E1" />
           <Text style={styles.emptyTitle}>No Products Yet</Text>
@@ -130,13 +144,22 @@ export default function Products() {
         </View>
       ) : (
         <FlatList
-          data={products}
+          data={LocalSales}
           renderItem={renderProduct}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
         />
       )}
+
+      <FilterFAB<Product>
+        items={products}
+        selectedId={selectedProductId}
+        onSelect={(id) => setSelectedProductId(id)}
+        getId={(p) => p.id}
+        getLabel={(p) => p.name}
+        title="Filter by Product"
+      />
     </SafeAreaView>
   );
 }

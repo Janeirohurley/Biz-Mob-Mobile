@@ -192,7 +192,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             lastSyncTimestamp: undefined,
             id: generateId(),
             eventType: "create",
-            entityType: "product",
+            entityType: "purchase",
             entityId: product.id,
             userName: config?.userName || "unknown",
             description: `Produit ${product.name} ajouté`,

@@ -42,8 +42,6 @@ export default function History() {
       payment: "payment",
       audit: "audit",
     },
-    start:0,
-    end:10
   });
 
   return (
