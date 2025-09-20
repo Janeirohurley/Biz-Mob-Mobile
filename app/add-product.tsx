@@ -401,7 +401,7 @@ export const styles = StyleSheet.create({
   priceInput: {
     flex: 1,
     borderWidth: 0,
-    backgroundColor: "transparent",
+    backgroundColor: "#00000000",
   },
   row: {
     flexDirection: "row",

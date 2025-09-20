@@ -1,8 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Picker } from "@react-native-picker/picker";
+import * as Crypto from "expo-crypto";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system";
-import * as Crypto from "expo-crypto";
 import { useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
@@ -17,10 +17,10 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { AppConfig, BackupData } from "../types/business";
-import { languages } from "../static/languages";
-import { currencies } from "../static/currencies";
 import { useBusiness } from "../context/BusinessContext";
+import { currencies } from "../static/currencies";
+import { languages } from "../static/languages";
+import { AppConfig, BackupData } from "../types/business";
 
 export default function SignupScreen() {
   const { importData, setConfig } = useBusiness();
@@ -560,7 +560,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#000000",
     borderWidth: 1,
-    borderColor: "transparent",
+    borderColor: "#00000000",
   },
   inputError: {
     borderColor: "#FF3B30",
@@ -569,7 +569,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F2F2F7",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "transparent",
+    borderColor: "#00000000",
     overflow: "hidden",
   },
   picker: {
@@ -585,7 +585,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: "transparent",
+    borderColor: "#00000000",
   },
   passwordInput: {
     flex: 1,

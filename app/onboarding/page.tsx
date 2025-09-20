@@ -1,9 +1,9 @@
-import React, { useState } from "react";
-import { View, Text, Image, StyleSheet, StatusBar, Platform } from "react-native";
-import AppIntroSlider from "react-native-app-intro-slider";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
+import React, { useState } from "react";
+import { Image, Platform, StatusBar, StyleSheet, Text, View } from "react-native";
+import AppIntroSlider from "react-native-app-intro-slider";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBusiness } from "../../context/BusinessContext";
 
 type Slide = {
@@ -52,7 +52,7 @@ export default function OnboardingScreen() {
       />
       <StatusBar
         translucent
-        backgroundColor="transparent"
+        backgroundColor="#00000000"
         barStyle="light-content"
       />
       <View style={{ flex: 1, backgroundColor: slides[activeIndex].backgroundColor }}>

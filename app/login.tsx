@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: "transparent",
+    borderColor: "#00000000",
   },
   passwordInput: {
     flex: 1,
