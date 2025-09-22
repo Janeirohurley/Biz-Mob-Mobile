@@ -31,7 +31,7 @@ extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
 }
 expoAutolinking.useExpoModules()
 
-rootProject.name = 'Biz-Mobile'
+rootProject.name = 'Biz Mobile'
 
 expoAutolinking.useExpoVersionCatalog()
 
