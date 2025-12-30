@@ -1,12 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Picker } from "@react-native-picker/picker";
-import * as Crypto from "expo-crypto";
-import * as DocumentPicker from "expo-document-picker";
-import * as FileSystem from "expo-file-system";
 import { useRouter } from "expo-router";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
+  Animated,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -14,436 +12,621 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import * as Crypto from "expo-crypto";
 import { useBusiness } from "../context/BusinessContext";
-import { currencies } from "../static/currencies";
-import { languages } from "../static/languages";
-import { AppConfig, BackupData } from "../types/business";
 
-export default function SignupScreen() {
-  const { importData, setConfig } = useBusiness();
+interface StepInfo {
+  title: string;
+  description: string;
+  illustration: string | number;
+}
+
+interface Currency {
+  id: string;
+  label: string;
+  currencySymbol: string;
+}
+
+interface Errors {
+  [key: string]: string | undefined;
+}
+
+export default function SignupMultiStep() {
   const router = useRouter();
-  const [formData, setFormData] = useState({
-    businessName: "",
-    userName: "",
-    password: "",
-    confirmPassword: "",
-    currencyCode: "FBU",
-    currencySymbol: "F",
-    currency: "Franc Burundais",
-    language: "en" as AppConfig["language"],
-    customCurrencyCode: "",
-    customSymbol: "",
-    customCurrency: "",
-  });
+  const { setConfig } = useBusiness();
+  const totalSteps = 5;
+  const [step, setStep] = useState<number>(1);
 
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [showImport, setShowImport] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // Form states
+  const [businessName, setBusinessName] = useState<string>("");
+  const [userName, setUserName] = useState<string>("");
+  const [currency, setCurrency] = useState<string>("");
+  const [language, setLanguage] = useState<string>("");
+  const [pin, setPin] = useState<string>("");
+  const [confirmPin, setConfirmPin] = useState<string>("");
 
-  const handleCurrencyChange = (code: string) => {
-    if (code === "OTHER") {
-      setFormData((p) => ({
-        ...p,
-        currencyCode: "OTHER",
-        currencySymbol: "",
-        customCurrencyCode: "",
-        customSymbol: "",
-        currency: ""
-      }));
-    } else {
-      const c = currencies.find((x) => x.code === code);
-      setFormData((p) => ({
-        ...p,
-        currencyCode: c?.code || "FBU",
-        currencySymbol: c?.symbol || "F",
-        currency: c?.name || "Franc Burundais",
-        customCurrencyCode: "",
-        customSymbol: "",
-      }));
-    }
-    setErrors((e) => {
-      const next = { ...e };
-      delete next.customCurrencyCode;
-      delete next.customSymbol;
-      delete next.currency;
-      return next;
-    });
+  const [errors, setErrors] = useState<Errors>({});
+  const [isStepValid, setIsStepValid] = useState<boolean>(true);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  // Animation for PIN shake
+  const shakeAnimation = new Animated.Value(0);
+
+
+
+  const getImageSource = (illustration: string | number) => {
+    return typeof illustration === "string" ? { uri: illustration } : illustration;
   };
 
-  const validate = (): boolean => {
-    const next: Record<string, string> = {};
+  const currencyOptions: Currency[] = [
+    { id: "1", label: "USD", currencySymbol: "$" },
+    { id: "2", label: "EUR", currencySymbol: "€" },
+    { id: "3", label: "BIF", currencySymbol: "FBu" },
+  ];
 
-    if (!formData.businessName.trim()) next.businessName = "Business name is required";
-    if (!formData.userName.trim()) next.userName = "User name is required";
-    if (!formData.password) next.password = "Password is required";
-    if (formData.password && formData.password.length < 4)
-      next.password = "Password must be at least 4 characters";
-    if (formData.password !== formData.confirmPassword)
-      next.confirmPassword = "Passwords do not match";
+  const languageOptions: { id: string; label: string }[] = [
+    { id: "1", label: "English" },
+    { id: "2", label: "Français" },
+  ];
 
-    if (formData.currencyCode === "OTHER") {
-      if (!formData.customCurrencyCode.trim()) next.customCurrencyCode = "Enter a custom currency code";
-      if (!formData.customSymbol.trim()) next.customSymbol = "Enter a custom currency symbol";
-      if (!formData.customCurrency.trim()) next.customCurrency = "Enter a custom currency name";
-    }
+  const stepInfo: StepInfo[] = [
+    {
+      title: "Business Information",
+      description:
+        "Provide your business name and username to personalize your experience.",
+      illustration: require("../assets/images/business_info.png"),
+    },
+    {
+      title: "Set Your PIN",
+      description:
+        "Create a secure 6-digit PIN to protect your account.",
+      illustration: require("../assets/images/secure-lock.png"),
+    },
+    {
+      title: "Confirm Your PIN",
+      description:
+        "Re-enter your PIN to confirm.",
+      illustration: require("../assets/images/secure-lock.png"),
+    },
+    {
+      title: "Preferences",
+      description: "Select your preferred currency and language for your dashboard.",
+      illustration: require("../assets/images/preferences.png"),
+    },
+    {
+      title: "Review & Confirm",
+      description: "Review your details before creating your account.",
+      illustration: require("../assets/images/review.png"),
+    },
+  ];
 
-    if (!formData.language) next.language = "Please select a language";
+  useEffect(() => {
+    const validateStep = (): boolean => {
+      const newErrors: Errors = {};
+      let valid = true;
 
-    setErrors(next);
-    return Object.keys(next).length === 0;
+      switch (step) {
+        case 1:
+          if (!businessName || businessName.length < 3) {
+            newErrors.businessName = "Business name must be at least 3 characters";
+            valid = false;
+          }
+          if (!userName || !/^[a-zA-Z0-9_]{3,}$/.test(userName)) {
+            newErrors.userName = "Username must be at least 3 characters and contain only letters, numbers, or underscores";
+            valid = false;
+          }
+          break;
+        case 2:
+          // Step 2: Enter PIN (6 digits required)
+          valid = pin.length === 6;
+          break;
+        case 3:
+          // Step 3: Confirm PIN (must match)
+          if (confirmPin.length === 6 && pin === confirmPin) {
+            valid = true;
+          } else {
+            valid = false;
+          }
+          break;
+        case 4:
+          if (!currency) {
+            newErrors.currency = "Please select a currency";
+            valid = false;
+          }
+          if (!language) {
+            newErrors.language = "Please select a language";
+            valid = false;
+          }
+          break;
+      }
+
+      setErrors(newErrors);
+      return valid;
+    };
+
+    setIsStepValid(validateStep());
+  }, [step, businessName, userName, currency, language, pin, confirmPin]);
+
+
+
+  const triggerShakeAnimation = () => {
+    shakeAnimation.setValue(0);
+    Animated.sequence([
+      Animated.timing(shakeAnimation, { toValue: 10, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnimation, { toValue: -10, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnimation, { toValue: 10, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnimation, { toValue: -10, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnimation, { toValue: 0, duration: 50, useNativeDriver: true }),
+    ]).start();
   };
 
-  const isFormValid = useMemo(() => {
-    if (!formData.businessName.trim() || !formData.userName.trim()) return false;
-    if (!formData.password || formData.password.length < 4) return false;
-    if (formData.password !== formData.confirmPassword) return false;
-    if (formData.currencyCode === "OTHER" && (!formData.customCurrencyCode.trim() || !formData.customSymbol.trim() || !formData.customCurrency.trim()))
-      return false;
-    if (!formData.language) return false;
-    return true;
-  }, [formData]);
-
-  const tryReadFile = async (uri: string): Promise<string> => {
-    try {
-      const response = await fetch(uri);
-      return await response.text();
-    } catch {
-      try {
-        return await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.UTF8 });
-      } catch {
-        throw new Error("Cannot read file content.");
+  const handlePinInput = (digit: string) => {
+    if (step === 2) {
+      // Step 2: Enter PIN
+      if (pin.length < 6) {
+        const newPin = pin + digit;
+        setPin(newPin);
+        // Auto-advance to confirmation when PIN is complete
+        if (newPin.length === 6) {
+          setTimeout(() => {
+            goNext();
+          }, 300);
+        }
+      }
+    } else if (step === 3) {
+      // Step 3: Confirm PIN
+      if (confirmPin.length < 6) {
+        const newConfirmPin = confirmPin + digit;
+        setConfirmPin(newConfirmPin);
+        // Auto-advance when confirmation PIN is complete
+        if (newConfirmPin.length === 6) {
+          if (pin === newConfirmPin) {
+            // PINs match, move to next step after a short delay
+            setTimeout(() => {
+              goNext();
+            }, 300);
+          } else {
+            // PINs don't match, trigger shake animation and show error
+            triggerShakeAnimation();
+            setErrors({ confirmPin: "PINs do not match" });
+            setTimeout(() => {
+              setConfirmPin("");
+              setErrors({});
+            }, 1000);
+          }
+        }
       }
     }
   };
 
-  const handleFileImport = async () => {
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: "application/json",
-        copyToCacheDirectory: true,
-      });
-
-      if (result.canceled) return;
-      const file = result.assets?.[0];
-      if (!file || !file.uri) {
-        Alert.alert("Error", "No file selected");
-        return;
-      }
-
-      const name = (file.name || "").toLowerCase();
-      if (!name.endsWith(".json")) {
-        Alert.alert("Error", "Invalid file type. Please select a JSON file.");
-        return;
-      }
-
-      const text = await tryReadFile(file.uri);
-
-      let importedData: BackupData;
-      try {
-        importedData = JSON.parse(text);
-      } catch {
-        Alert.alert("Error", "Invalid JSON format. Please select a valid BizMob file.");
-        return;
-      }
-
-      if (!importedData.config || !importedData.config.businessName) {
-        Alert.alert("Error", "Invalid BizMob file. Missing config data.");
-        return;
-      }
-
-      const cfg = importedData.config;
-
-      setFormData((p) => ({
-        ...p,
-        businessName: cfg.businessName || "",
-        userName: cfg.userName || "",
-        password: "",
-        confirmPassword: "",
-        currency: cfg.currency || "Franc Burundais",
-        currencyCode: cfg.currencyCode || "FBU",
-        currencySymbol: cfg.currencySymbol || "F",
-        customCurrencyCode: "",
-        customSymbol: "",
-        customCurrency: "",
-        language: cfg.language || "en",
-      }));
-
-      importData?.(importedData);
-      setShowImport(false);
-      setErrors({});
-      Alert.alert("Success", "Data imported successfully! Please set a new password.");
-    } catch (err: any) {
-      Alert.alert("Error", err?.message || "Unexpected error while importing file.");
+  const handlePinDelete = () => {
+    if (step === 2) {
+      setPin(pin.slice(0, -1));
+    } else if (step === 3) {
+      setConfirmPin(confirmPin.slice(0, -1));
     }
   };
 
-  const handleSubmit = async () => {
-    if (!validate()) return;
-    console.log("data")
-    const finalCurrencyCode =
-      formData.currencyCode === "OTHER"
-        ? formData.customCurrencyCode.trim().toUpperCase()
-        : formData.currencyCode;
-    const finalSymbol =
-      formData.currencyCode === "OTHER"
-        ? formData.customSymbol.trim()
-        : formData.currencySymbol;
-    const finalCurrency = formData.currencyCode === "OTHER"
-      ? formData.customCurrency.trim() : formData.currency
+  const goNext = () => {
+    if (isStepValid) setStep((s) => Math.min(totalSteps, s + 1));
+  };
 
-    const passwordHash = await Crypto.digestStringAsync(
-      Crypto.CryptoDigestAlgorithm.SHA256,
-      formData.password
-    );
+  const goBack = () => {
+    if (step === 3) {
+      // Going back from PIN confirmation clears the confirmation
+      setConfirmPin("");
+    }
+    setStep((s) => Math.max(1, s - 1));
+  };
 
+  const handleFinish = async () => {
     setIsSubmitting(true);
     try {
+      // Hash the PIN using SHA256
+      const passwordHash = await Crypto.digestStringAsync(
+        Crypto.CryptoDigestAlgorithm.SHA256,
+        pin
+      );
+
+      // Get the selected currency details
+      const selectedCurrency = currencyOptions.find(c => c.id === currency);
+      const finalCurrencyCode = selectedCurrency?.label || "USD";
+      const finalSymbol = selectedCurrency?.currencySymbol || "$";
+
+      // Get the selected language
+      const selectedLanguage = languageOptions.find(l => l.id === language);
+      const finalLanguage: "en" | "fr" | "es" | "ar" = selectedLanguage?.label === "Français" ? "fr" : "en";
+
+      // Create the config object
       setConfig({
         version: 1,
         lastSyncTimestamp: undefined,
-        businessName: formData.businessName.trim(),
-        userName: formData.userName.trim(),
+        businessName: businessName.trim(),
+        userName: userName.trim(),
         passwordHash,
         currencyCode: finalCurrencyCode,
         currencySymbol: finalSymbol,
-        currency: finalCurrency,
-        language: formData.language,
-        isRTL: formData.language === "ar"
+        currency: finalCurrencyCode,
+        language: finalLanguage,
+        isRTL: false // English and French are LTR, would be true for Arabic
       });
-      router.replace("/login");
+
+      // Show success message and redirect to login
+      Alert.alert("Success", "Your account has been created!", [
+        {
+          text: "OK",
+          onPress: () => router.replace("/login"),
+        }
+      ]);
+    } catch (error) {
+      console.error("Error creating account:", error);
+      Alert.alert("Error", "Failed to create account. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
+  };
 
+  const renderStepContent = (): React.ReactNode => {
+    // Debug: log current step and validation state to help diagnose empty render issues
+    // (will appear in Metro/console when running the app)
+     
+    console.log("renderStepContent: step=", step, "isStepValid=", isStepValid);
+
+    switch (step) {
+      // --- Step 1: Business Info ---
+      case 1:
+        return (
+          <>
+            <TextInput
+              placeholder="Business Name"
+              style={[styles.input, errors.businessName && styles.inputError]}
+              value={businessName}
+              onChangeText={setBusinessName}
+            />
+            {errors.businessName && <Text style={styles.error}>{errors.businessName}</Text>}
+
+            <TextInput
+              placeholder="Username"
+              style={[styles.input, errors.userName && styles.inputError]}
+              value={userName}
+              onChangeText={setUserName}
+            />
+            {errors.userName && <Text style={styles.error}>{errors.userName}</Text>}
+          </>
+        );
+      case 2:
+        // --- Step 2: Enter PIN ---
+        return (
+          <View style={styles.pinContainer}>
+            <Text style={styles.pinLabel}>Enter a 6-digit PIN</Text>
+
+            {/* PIN Display with 6 circles */}
+            <View style={styles.pinDotsContainer}>
+              {[...Array(6)].map((_, index) => (
+                <View
+                  key={index}
+                  style={[
+                    styles.pinDot,
+                    index < pin.length && styles.pinDotFilled,
+                  ]}
+                />
+              ))}
+            </View>
+
+            {/* Digital Pad */}
+            <View style={styles.digitalPad}>
+              <View style={styles.digitalPadRow}>
+                {["1", "2", "3"].map((key) => (
+                  <TouchableOpacity
+                    key={key}
+                    style={styles.digitalPadButton}
+                    onPress={() => handlePinInput(key)}
+                    activeOpacity={0.6}
+                  >
+                    <Text style={styles.digitalPadText}>{key}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={styles.digitalPadRow}>
+                {["4", "5", "6"].map((key) => (
+                  <TouchableOpacity
+                    key={key}
+                    style={styles.digitalPadButton}
+                    onPress={() => handlePinInput(key)}
+                    activeOpacity={0.6}
+                  >
+                    <Text style={styles.digitalPadText}>{key}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={styles.digitalPadRow}>
+                {["7", "8", "9"].map((key) => (
+                  <TouchableOpacity
+                    key={key}
+                    style={styles.digitalPadButton}
+                    onPress={() => handlePinInput(key)}
+                    activeOpacity={0.6}
+                  >
+                    <Text style={styles.digitalPadText}>{key}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={styles.digitalPadRow}>
+                <View style={styles.digitalPadButtonEmpty} />
+                <TouchableOpacity
+                  style={styles.digitalPadButton}
+                  onPress={() => handlePinInput("0")}
+                  activeOpacity={0.6}
+                >
+                  <Text style={styles.digitalPadText}>0</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.digitalPadButton}
+                  onPress={handlePinDelete}
+                  activeOpacity={0.6}
+                >
+                  <Ionicons name="backspace-outline" size={26} color="#1C1C1E" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        );
+      case 3:
+        // --- Step 3: Confirm PIN ---
+        const hasError = errors.confirmPin;
+
+        return (
+          <View style={styles.pinContainer}>
+            <Text style={styles.pinLabel}>Confirm your PIN</Text>
+
+            {/* PIN Display with 6 circles */}
+            <Animated.View
+              style={[
+                styles.pinDotsContainer,
+                { transform: [{ translateX: shakeAnimation }] }
+              ]}
+            >
+              {[...Array(6)].map((_, index) => (
+                <View
+                  key={index}
+                  style={[
+                    styles.pinDot,
+                    index < confirmPin.length && !hasError && styles.pinDotFilled,
+                    index < confirmPin.length && hasError && styles.pinDotError,
+                  ]}
+                />
+              ))}
+            </Animated.View>
+
+            {errors.confirmPin && <Text style={styles.error}>{errors.confirmPin}</Text>}
+
+            {/* Digital Pad */}
+            <View style={styles.digitalPad}>
+              <View style={styles.digitalPadRow}>
+                {["1", "2", "3"].map((key) => (
+                  <TouchableOpacity
+                    key={key}
+                    style={styles.digitalPadButton}
+                    onPress={() => handlePinInput(key)}
+                    activeOpacity={0.6}
+                  >
+                    <Text style={styles.digitalPadText}>{key}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={styles.digitalPadRow}>
+                {["4", "5", "6"].map((key) => (
+                  <TouchableOpacity
+                    key={key}
+                    style={styles.digitalPadButton}
+                    onPress={() => handlePinInput(key)}
+                    activeOpacity={0.6}
+                  >
+                    <Text style={styles.digitalPadText}>{key}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={styles.digitalPadRow}>
+                {["7", "8", "9"].map((key) => (
+                  <TouchableOpacity
+                    key={key}
+                    style={styles.digitalPadButton}
+                    onPress={() => handlePinInput(key)}
+                    activeOpacity={0.6}
+                  >
+                    <Text style={styles.digitalPadText}>{key}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={styles.digitalPadRow}>
+                <View style={styles.digitalPadButtonEmpty} />
+                <TouchableOpacity
+                  style={styles.digitalPadButton}
+                  onPress={() => handlePinInput("0")}
+                  activeOpacity={0.6}
+                >
+                  <Text style={styles.digitalPadText}>0</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.digitalPadButton}
+                  onPress={handlePinDelete}
+                  activeOpacity={0.6}
+                >
+                  <Ionicons name="backspace-outline" size={26} color="#1C1C1E" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        );
+      // --- Step 4: Preferences ---
+      case 4:
+        return (
+          <View style={styles.preferencesContainer}>
+            {/* Currency Selection */}
+            <View style={styles.preferenceSection}>
+              <Text style={styles.preferenceTitle}>Select Currency</Text>
+              <View style={styles.buttonGrid}>
+                {currencyOptions.map((item) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={[
+                      styles.gridButton,
+                      currency === item.id && styles.gridButtonSelected,
+                    ]}
+                    onPress={() => setCurrency(item.id)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.gridButtonSymbol}>{item.currencySymbol}</Text>
+                    <Text
+                      style={[
+                        styles.gridButtonText,
+                        currency === item.id && styles.gridButtonTextSelected,
+                      ]}
+                    >
+                      {item.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              {errors.currency && <Text style={styles.error}>{errors.currency}</Text>}
+            </View>
+
+            {/* Language Selection */}
+            <View style={styles.preferenceSection}>
+              <Text style={styles.preferenceTitle}>Select Language</Text>
+              <View style={styles.buttonGrid}>
+                {languageOptions.map((item) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={[
+                      styles.gridButton,
+                      language === item.id && styles.gridButtonSelected,
+                    ]}
+                    onPress={() => setLanguage(item.id)}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[
+                        styles.gridButtonTextLarge,
+                        language === item.id && styles.gridButtonTextSelected,
+                      ]}
+                    >
+                      {item.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              {errors.language && <Text style={styles.error}>{errors.language}</Text>}
+            </View>
+          </View>
+        );
+      // --- Step 5: Review & Confirm ---
+      case 5:
+        return (
+          <View style={styles.reviewContainer}>
+            <Text style={styles.reviewTitle}>Review Your Information</Text>
+            <Text style={styles.reviewSubtitle}>Please confirm your details before proceeding.</Text>
+
+            <View style={styles.reviewItem}>
+              <Ionicons name="business" size={24} color="#007AFF" />
+              <View style={styles.reviewTextContainer}>
+                <Text style={styles.reviewLabel}>Business Name</Text>
+                <Text style={styles.reviewValue}>{businessName}</Text>
+              </View>
+            </View>
+
+            <View style={styles.reviewItem}>
+              <Ionicons name="person" size={24} color="#007AFF" />
+              <View style={styles.reviewTextContainer}>
+                <Text style={styles.reviewLabel}>Username</Text>
+                <Text style={styles.reviewValue}>{userName}</Text>
+              </View>
+            </View>
+
+            <View style={styles.reviewItem}>
+              <Ionicons name="cash" size={24} color="#007AFF" />
+              <View style={styles.reviewTextContainer}>
+                <Text style={styles.reviewLabel}>Currency</Text>
+                <Text style={styles.reviewValue}>{currencyOptions.find(c => c.id === currency)?.label || currency}</Text>
+              </View>
+            </View>
+
+            <View style={styles.reviewItem}>
+              <Ionicons name="language" size={24} color="#007AFF" />
+              <View style={styles.reviewTextContainer}>
+                <Text style={styles.reviewLabel}>Language</Text>
+                <Text style={styles.reviewValue}>{languageOptions.find(l => l.id === language)?.label || language}</Text>
+              </View>
+            </View>
+          </View>
+        );
+
+      default:
+         
+        console.warn("renderStepContent: unexpected step value:", step);
+        // fallback visuel pour debug au lieu de null
+        return (
+          <View style={{ padding: 16, backgroundColor: "#fff", borderRadius: 12 }}>
+            <Text style={{ color: "#000", marginBottom: 8 }}>Étape invalide ({step})</Text>
+            <TouchableOpacity onPress={() => setStep(1)} style={{ backgroundColor: "#007AFF", padding: 10, borderRadius: 8, alignItems: "center" }}>
+              <Text style={{ color: "#fff", fontWeight: "600" }}>Retour à l&apos;étape 1</Text>
+            </TouchableOpacity>
+          </View>
+        );
+    }
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
-        style={styles.container}
+        style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
+        {/* Progress Bar */}
+        <View style={styles.progressContainer}>
+          <Animated.View style={[styles.progressBar, { width: `${(step / totalSteps) * 100}%` }]} />
+        </View>
+
         <ScrollView
-          contentContainerStyle={styles.content}
+          contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.header}>
-            <View style={styles.logoCircle}>
-              <Ionicons name="book-outline" size={36} color="#007AFF" />
-            </View>
-            <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>Set up your business profile</Text>
+            <Image source={getImageSource(stepInfo[step - 1].illustration)} style={styles.image} />
+            <Text style={styles.title}>{stepInfo[step - 1].title}</Text>
+            <Text style={styles.desc}>{stepInfo[step - 1].description}</Text>
           </View>
 
-          <View style={styles.form}>
-            {!showImport ? (
+          {renderStepContent()}
+
+          {/* Footer intégré dans le ScrollView */}
+          <View style={styles.footer}>
+            {step > 1 && (
               <TouchableOpacity
-                style={styles.importButton}
-                onPress={() => setShowImport(true)}
-                activeOpacity={0.7}
+                style={styles.backButton}
+                onPress={goBack}
+                disabled={isSubmitting}
               >
-                <Ionicons name="cloud-download-outline" size={20} color="#007AFF" />
-                <Text style={styles.importButtonText}>Import Existing Data</Text>
+                <Text style={styles.backText}>Back</Text>
               </TouchableOpacity>
-            ) : (
-              <View style={styles.importBox}>
-                <Ionicons name="document-text-outline" size={32} color="#8E8E93" />
-                <Text style={styles.importText}>Import your BizMob .json file</Text>
-                <TouchableOpacity
-                  onPress={handleFileImport}
-                  style={styles.fileButton}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="folder-open-outline" size={18} color="#007AFF" />
-                  <Text style={styles.fileButtonText}>Choose JSON file</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.cancelButton}
-                  onPress={() => setShowImport(false)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
-                </TouchableOpacity>
-              </View>
             )}
-
-            <View style={styles.field}>
-              <Text style={styles.label}>Business Name *</Text>
-              <TextInput
-                style={[styles.input, errors.businessName && styles.inputError]}
-                placeholder="Enter your business name"
-                placeholderTextColor="#8E8E93"
-                value={formData.businessName}
-                onChangeText={(text) => setFormData((p) => ({ ...p, businessName: text }))}
-              />
-              {errors.businessName && <Text style={styles.errorText}>{errors.businessName}</Text>}
-            </View>
-
-            <View style={styles.field}>
-              <Text style={styles.label}>Your Name *</Text>
-              <TextInput
-                style={[styles.input, errors.userName && styles.inputError]}
-                placeholder="Enter your name"
-                placeholderTextColor="#8E8E93"
-                value={formData.userName}
-                onChangeText={(text) => setFormData((p) => ({ ...p, userName: text }))}
-              />
-              {errors.userName && <Text style={styles.errorText}>{errors.userName}</Text>}
-            </View>
-
-            <View style={styles.field}>
-              <Text style={styles.label}>Currency *</Text>
-              <View style={[styles.pickerContainer, errors.currency && styles.inputError]}>
-                <Picker
-                  selectedValue={formData.currencyCode}
-                  onValueChange={handleCurrencyChange}
-                  style={styles.picker}
-                >
-                  {currencies.map((c) => (
-                    <Picker.Item
-                      key={c.code}
-                      label={`${c.name}${c.symbol ? ` (${c.symbol})` : ""}`}
-                      value={c.code}
-                       style={styles.input}
-                    />
-                  ))}
-                </Picker>
-              </View>
-              {errors.currency && <Text style={styles.errorText}>{errors.currency}</Text>}
-            </View>
-
-            {formData.currencyCode === "OTHER" && (
-              <>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Currency Name *</Text>
-                  <TextInput
-                    style={[styles.input, errors.customCurrency && styles.inputError]}
-                    placeholder="e.g., Franc Burundais"
-                    placeholderTextColor="#8E8E93"
-                    value={formData.customCurrency}
-                    onChangeText={(text) => setFormData((p) => ({ ...p, customCurrency: text }))}
-                  />
-                  {errors.customCurrency && <Text style={styles.errorText}>{errors.customCurrency}</Text>}
-                </View>
-
-                <View style={styles.row}>
-                  <View style={[styles.field, { flex: 1, marginRight: 8 }]}>
-                    <Text style={styles.label}>Currency Code *</Text>
-                    <TextInput
-                      style={[styles.input, errors.customCurrencyCode && styles.inputError]}
-                      placeholder="e.g., FBU"
-                      placeholderTextColor="#8E8E93"
-                      autoCapitalize="characters"
-                      value={formData.customCurrencyCode}
-                      onChangeText={(text) => setFormData((p) => ({ ...p, customCurrencyCode: text }))}
-                    />
-                    {errors.customCurrencyCode && <Text style={styles.errorText}>{errors.customCurrencyCode}</Text>}
-                  </View>
-
-                  <View style={[styles.field, { flex: 1, marginLeft: 8 }]}>
-                    <Text style={styles.label}>Symbol *</Text>
-                    <TextInput
-                      style={[styles.input, errors.customSymbol && styles.inputError]}
-                      placeholder="e.g., F"
-                      placeholderTextColor="#8E8E93"
-                      value={formData.customSymbol}
-                      onChangeText={(text) => setFormData((p) => ({ ...p, customSymbol: text }))}
-                    />
-                    {errors.customSymbol && <Text style={styles.errorText}>{errors.customSymbol}</Text>}
-                  </View>
-                </View>
-              </>
-            )}
-
-            <View style={styles.field}>
-              <Text style={styles.label}>Language *</Text>
-              <View style={[styles.pickerContainer, errors.language && styles.inputError]}>
-                <Picker
-                  selectedValue={formData.language}
-                  onValueChange={(code) => setFormData((p) => ({ ...p, language: code as AppConfig["language"] }))}
-                  style={styles.picker}
-
-                >
-                  {languages.map((l) => (
-                    <Picker.Item key={l.code} label={l.name} value={l.code}  style={styles.input} />
-                  ))}
-                </Picker>
-              </View>
-              {errors.language && <Text style={styles.errorText}>{errors.language}</Text>}
-            </View>
-
-            <View style={styles.field}>
-              <Text style={styles.label}>Password *</Text>
-              <View style={[styles.passwordContainer, errors.password && styles.inputError]}>
-                <TextInput
-                  style={styles.passwordInput}
-                  placeholder="Create a secure password"
-                  placeholderTextColor="#8E8E93"
-                  secureTextEntry={!showPassword}
-                  value={formData.password}
-                  onChangeText={(text) => setFormData((p) => ({ ...p, password: text }))}
-                />
-                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                  <Ionicons
-                    name={showPassword ? "eye-off-outline" : "eye-outline"}
-                    size={20}
-                    color="#8E8E93"
-                  />
-                </TouchableOpacity>
-              </View>
-              {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
-            </View>
-
-            <View style={styles.field}>
-              <Text style={styles.label}>Confirm Password *</Text>
-              <View style={[styles.passwordContainer, errors.confirmPassword && styles.inputError]}>
-                <TextInput
-                  style={styles.passwordInput}
-                  placeholder="Confirm your password"
-                  placeholderTextColor="#8E8E93"
-                  secureTextEntry={!showConfirm}
-                  value={formData.confirmPassword}
-                  onChangeText={(text) => setFormData((p) => ({ ...p, confirmPassword: text }))}
-                />
-                <TouchableOpacity onPress={() => setShowConfirm(!showConfirm)}>
-                  <Ionicons
-                    name={showConfirm ? "eye-off-outline" : "eye-outline"}
-                    size={20}
-                    color="#8E8E93"
-                  />
-                </TouchableOpacity>
-              </View>
-              {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
-            </View>
-
             <TouchableOpacity
-              style={[styles.submitButton, (!isFormValid || isSubmitting) && styles.submitButtonDisabled]}
-              onPress={handleSubmit}
-              disabled={!isFormValid || isSubmitting}
-              activeOpacity={0.7}
+              style={[
+                styles.nextButton,
+                (!isStepValid || isSubmitting) && { backgroundColor: "#B0B0B0" }
+              ]}
+              disabled={!isStepValid || isSubmitting}
+              onPress={step === totalSteps ? handleFinish : goNext}
             >
-              <Text style={styles.submitButtonText}>
-                {isSubmitting ? "Creating Account..." : "Create Account"}
+              <Text style={styles.nextText}>
+                {isSubmitting ? "Creating..." : (step === totalSteps ? "Validate" : "Next")}
               </Text>
             </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.loginLink}
-              onPress={() => router.push('/login')}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.loginLinkText}>Already have an account? Sign In</Text>
-            </TouchableOpacity>
-
-            <Text style={styles.disclaimer}>
-              All data is stored locally on your device. No internet connection required.
-            </Text>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -452,180 +635,143 @@ export default function SignupScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F2F2F7",
-  },
-  content: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  header: {
-    alignItems: "center",
-    marginBottom: 32,
-    marginTop: 20,
-  },
-  logoCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "#FFFFFF",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#000000",
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 13,
-    color: "#8E8E93",
-  },
-  form: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 20,
-  },
-  importButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#F2F2F7",
-    borderRadius: 12,
-    paddingVertical: 12,
-    marginBottom: 20,
-    gap: 8,
-  },
-  importButtonText: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: "#007AFF",
-  },
-  importBox: {
-    backgroundColor: "#F8FAFC",
-    borderRadius: 12,
-    padding: 20,
-    alignItems: "center",
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    borderStyle: "dashed",
-  },
-  importText: {
-    fontSize: 14,
-    color: "#8E8E93",
-    marginTop: 12,
-    marginBottom: 16,
-    textAlign: "center",
-  },
-  fileButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#007AFF",
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    gap: 8,
-  },
-  fileButtonText: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: "#FFFFFF",
-  },
-  cancelButton: {
-    marginTop: 12,
-    paddingVertical: 8,
-  },
-  cancelButtonText: {
-    fontSize: 13,
-    color: "#8E8E93",
-  },
-  field: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: "#000000",
-    marginBottom: 8,
-  },
+  container: { flex: 1, backgroundColor: "#F9F9FB" },
+  scroll: { padding: 20, paddingBottom: 20 },
+  header: { alignItems: "center", marginBottom: 20 },
+  image: { width: 180, height: 180, marginBottom: 10 },
+  title: { fontSize: 20, fontWeight: "600", color: "#000" },
+  desc: { textAlign: "center", color: "#6e6e73", fontSize: 14, lineHeight: 20, marginTop: 8 },
   input: {
-    backgroundColor: "#F2F2F7",
+    backgroundColor: "#fff",
     borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    fontSize: 13,
-    color: "#000000",
+    padding: 14,
+    marginBottom: 14,
     borderWidth: 1,
-    borderColor: "#00000000",
+    borderColor: "#E5E5EA",
+    fontSize: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 2 },
   },
-  inputError: {
+  inputError: { borderColor: "#FF3B30" },
+  error: { color: "#FF3B30", fontSize: 12, marginBottom: 8, textAlign: "left" },
+
+  // PIN Styles
+  pinContainer: { alignItems: "center", marginTop: 10 },
+  pinLabel: { fontSize: 17, fontWeight: "500", color: "#1C1C1E", marginBottom: 40, letterSpacing: -0.4 },
+  pinDotsContainer: { flexDirection: "row", justifyContent: "center", marginBottom: 50 },
+  pinDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: "#D1D1D6",
+    marginHorizontal: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pinDotFilled: {
+    backgroundColor: "#1C1C1E",
+  },
+  pinDotError: {
+    backgroundColor: "#FF3B30",
     borderColor: "#FF3B30",
   },
-  pickerContainer: {
+
+  // Digital Pad Styles - iPhone Style
+  digitalPad: { marginTop: 20, width: "100%", paddingHorizontal: 40 },
+  digitalPadRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 12 },
+  digitalPadButton: {
+    width: 75,
+    height: 75,
+    borderRadius: 37.5,
+    backgroundColor: "#F2F2F7",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  digitalPadButtonEmpty: {
+    width: 75,
+    height: 75,
+  },
+  digitalPadText: {
+    fontSize: 32,
+    fontWeight: "300",
+    color: "#1C1C1E",
+  },
+
+  // Preferences Styles
+  preferencesContainer: {
+    width: "100%",
+    paddingHorizontal: 10,
+  },
+  preferenceSection: {
+    marginBottom: 30,
+  },
+  preferenceTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#1C1C1E",
+    marginBottom: 16,
+    textAlign: "left",
+  },
+  buttonGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "flex-start",
+    gap: 8,
+  },
+  gridButton: {
+    minWidth: 80,
+    height: 40,
     backgroundColor: "#F2F2F7",
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#00000000",
-    overflow: "hidden",
-  },
-  picker: {
-    color: "#000000",
-  },
-  row: {
-    flexDirection: "row",
-  },
-  passwordContainer: {
-    flexDirection: "row",
+    borderWidth: 2,
+    borderColor: "#E5E5EA",
     alignItems: "center",
-    backgroundColor: "#F2F2F7",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: "#00000000",
+    justifyContent: "center",
+    paddingVertical: 8,
+    flexDirection:"row",
+    gap:5,
   },
-  passwordInput: {
-    flex: 1,
-    paddingVertical: 10,
-    fontSize: 13,
-    color: "#000000",
+  gridButtonSelected: {
+    backgroundColor: "#E5F0FF",
+    borderColor: "#007AFF",
+    borderWidth: 2,
   },
-  errorText: {
-    fontSize: 12,
-    color: "#FF3B30",
-    marginTop: 4,
+  gridButtonSymbol: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#1C1C1E",
+    marginBottom: 2,
   },
-  submitButton: {
-    backgroundColor: "#007AFF",
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: "center",
-    marginTop: 8,
+  gridButtonText: {
+    fontSize: 11,
+    fontWeight: "500",
+    color: "#6e6e73",
+    textAlign: "center",
   },
-  submitButtonDisabled: {
-    opacity: 0.5,
-  },
-  submitButtonText: {
+  gridButtonTextLarge: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#FFFFFF",
-  },
-  loginLink: {
-    alignItems: "center",
-    marginTop: 20,
-  },
-  loginLinkText: {
-    fontSize: 13,
-    color: "#007AFF",
-  },
-  disclaimer: {
-    fontSize: 12,
-    color: "#8E8E93",
+    color: "#1C1C1E",
     textAlign: "center",
-    marginTop: 20,
-    lineHeight: 20,
   },
+  gridButtonTextSelected: {
+    color: "#007AFF",
+    fontWeight: "600",
+  },
+
+  reviewContainer: { backgroundColor: "#fff", borderRadius: 16, padding: 20, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 5, marginTop: 10 },
+  reviewTitle: { fontSize: 22, fontWeight: "700", color: "#000", textAlign: "center", marginBottom: 8 },
+  reviewSubtitle: { fontSize: 14, color: "#6e6e73", textAlign: "center", marginBottom: 20 },
+  reviewItem: { flexDirection: "row", alignItems: "center", marginBottom: 16, paddingVertical: 8, paddingHorizontal: 12, backgroundColor: "#F9F9FB", borderRadius: 12 },
+  reviewTextContainer: { marginLeft: 12, flex: 1 },
+  reviewLabel: { fontSize: 12, color: "#6e6e73", textTransform: "uppercase", fontWeight: "600" },
+  reviewValue: { fontSize: 16, color: "#000", fontWeight: "500" },
+  progressContainer: { height: 6, backgroundColor: "#E5E5EA", borderRadius: 3, marginHorizontal: 20, marginVertical: 12 },
+  progressBar: { height: 6, backgroundColor: "#007AFF", borderRadius: 3 },
+  footer: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 20, backgroundColor: "#F9F9FB", marginTop: 30 },
+  backButton: { flex: 1, backgroundColor: "#E5E5EA", borderRadius: 10, padding: 12, marginRight: 8, alignItems: "center" },
+  nextButton: { flex: 1, backgroundColor: "#007AFF", borderRadius: 10, padding: 12, marginLeft: 8, alignItems: "center" },
+  backText: { color: "#000", fontWeight: "500" },
+  nextText: { color: "#fff", fontWeight: "600" },
 });

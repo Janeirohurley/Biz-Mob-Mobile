@@ -24,7 +24,7 @@ import { BackupData } from "@/types/business";
 import SyncUrlModal from "@/components/SyncUrlModal";
 
 export default function Settings() {
-  const { config, resetApp, logout, updateConfig, importData, clients, sales, debts, products, auditLogs, setClients, setSales, setAuditLogs, setDebts, setPurchases, setProducts } = useBusiness();
+  const { config, resetApp, logout, updateConfig, importData, clients, sales, debts, products, auditLogs, setClients, setSales, setAuditLogs, setDebts, setPurchases, setProducts, purchases } = useBusiness();
   const router = useRouter();
   const [modalVisible, setModalVisible] = useState<"business" | "currency" | "security" | null>(null);
   const [businessName, setBusinessName] = useState(config?.businessName || "");
@@ -46,10 +46,11 @@ export default function Settings() {
   ) => {
     const syncUrl = endpoint || "http://localhost:3000"; // URL par défaut
     setIsSyncing(true);
+
     try {
       if (!config) throw new Error("Configuration non disponible");
 
-      const steps = 6; // nombre total d'étapes
+      const steps = 4; // moins d'étapes maintenant
       let currentStep = 0;
       const advance = () => {
         currentStep++;
@@ -58,129 +59,60 @@ export default function Settings() {
         }
       };
 
-      // 1. Préparer les données locales
+      // 1️⃣ Préparer les données locales
       const localData: BackupData = {
         config,
         clients,
         sales,
-        purchases: [],
+        purchases,
         debts,
         products,
         auditLogs,
-        lastSyncTimestamp:
-          config?.lastSyncTimestamp || new Date().toISOString(),
+        lastSyncTimestamp: config?.lastSyncTimestamp || new Date().toISOString(),
         version: config.version || 1,
       };
       advance();
 
-      // 2. Récupérer les données du serveur
-      const response = await axios.get(`${syncUrl}/fetch`, {
+      // 2️⃣ Envoyer les données locales au backend
+      const response = await axios.post(`${syncUrl}/sync`, localData, {
         headers: { "Content-Type": "application/json" },
       });
-      const serverData: BackupData = response.data;
       advance();
 
-      // 3. Fusionner toutes les entités
-      const mergeEntities = <
-        T extends {
-          id: string;
-          version?: number;
-          isDeleted?: boolean;
-          updatedAt?: string;
-          createdAt?: string;
-        }
-      >(
-        local: T[],
-        server: T[]
-      ): T[] => {
-        const map = new Map<string, T>();
-        local.forEach((item) => {
-          if (!item.isDeleted) map.set(item.id, item);
-        });
-        server.forEach((item) => {
-          const existing = map.get(item.id);
-          if (!existing) {
-            map.set(item.id, {
-              ...item,
-              syncStatus: "synced",
-              lastSyncTimestamp: new Date().toISOString(),
-            });
-          } else if (item.isDeleted) {
-            map.set(item.id, {
-              ...existing,
-              isDeleted: true,
-              syncStatus: "synced",
-              lastSyncTimestamp: new Date().toISOString(),
-            });
-          } else if (
-            (item.version || 0) > (existing.version || 0) ||
-            new Date(item.updatedAt || item.createdAt || 0) >
-            new Date(existing.updatedAt || existing.createdAt || 0)
-          ) {
-            map.set(item.id, {
-              ...item,
-              syncStatus: "synced",
-              lastSyncTimestamp: new Date().toISOString(),
-            });
-          }
-        });
-        return Array.from(map.values());
-      };
+      // 3️⃣ Le backend renvoie les données déjà fusionnées
+      const syncedData: BackupData = response.data;
 
-      const mergedData: BackupData = {
-        config: serverData.config || localData.config,
-        clients: mergeEntities(localData.clients, serverData.clients),
-        sales: mergeEntities(localData.sales, serverData.sales),
-        purchases: mergeEntities(
-          localData.purchases || [],
-          serverData.purchases || []
-        ),
-        debts: mergeEntities(localData.debts, serverData.debts),
-        products: mergeEntities(localData.products, serverData.products),
-        auditLogs: mergeEntities(localData.auditLogs, serverData.auditLogs),
-        lastSyncTimestamp: new Date().toISOString(),
-        version: Math.max(localData.version || 0, serverData.version || 0) + 1,
-      };
-      advance();
-
-      // 4. Mettre à jour l'état local
-      setClients(mergedData.clients);
-      setSales(mergedData.sales);
-      setPurchases(mergedData.purchases);
-      setDebts(mergedData.debts);
-      setProducts(mergedData.products);
-      setAuditLogs(mergedData.auditLogs);
+      // Mettre à jour l'état local directement avec ces données
+      setClients(syncedData.clients);
+      setSales(syncedData.sales);
+      setPurchases(syncedData.purchases);
+      setDebts(syncedData.debts);
+      setProducts(syncedData.products);
+      setAuditLogs(syncedData.auditLogs);
       updateConfig({
-        lastSyncTimestamp: mergedData.lastSyncTimestamp,
-        version: mergedData.version,
+        lastSyncTimestamp: syncedData.lastSyncTimestamp,
+        version: syncedData.version,
       });
       advance();
 
-      // 5. Envoyer lu serva fusion aeur
-      await axios.post(`${syncUrl}/sync`, mergedData, {
-        headers: { "Content-Type": "application/json" },
-      });
+      // 4️⃣ Terminé
+      Alert.alert("Success", "Data synced successfully!");
       advance();
-
-      // 6. Terminé
-      Alert.alert("Success", "Data synced successfully (merged)!");
-      advance();
-      router.push('/')
+      router.push("/");
     } catch (error) {
       console.error("Sync error:", error);
       Alert.alert(
         "Error",
         "Failed to sync data. Please check your internet connection and try again."
       );
-
     } finally {
       if (updateProgress) {
-
-        updateProgress(0)
+        updateProgress(0);
       }
       setIsSyncing(false);
     }
   };
+
 
 
 

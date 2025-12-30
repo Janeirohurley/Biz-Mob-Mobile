@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useBusiness } from "../context/BusinessContext";
 
-export default function LoginScreen() {
+export default function LockScreen() {
   const { config, login } = useBusiness();
   const router = useRouter();
   const [pin, setPin] = useState("");
@@ -97,13 +97,13 @@ export default function LoginScreen() {
           <View style={styles.logoCircle}>
             <Ionicons name="lock-closed" size={40} color="#007AFF" />
           </View>
-          <Text style={styles.title}>Welcome Back</Text>
+          <Text style={styles.title}>Screen Locked</Text>
           <Text style={styles.subtitle}>{config.businessName}</Text>
           <Text style={styles.userName}>{config.userName}</Text>
         </View>
 
         <View style={styles.pinSection}>
-          <Text style={styles.pinLabel}>Enter your PIN</Text>
+          <Text style={styles.pinLabel}>Enter your PIN to unlock</Text>
 
           {/* PIN Display */}
           <Animated.View
@@ -182,10 +182,6 @@ export default function LoginScreen() {
               </TouchableOpacity>
             </View>
           </View>
-
-          <TouchableOpacity style={styles.forgotButton} onPress={() => {}}>
-            <Text style={styles.forgotText}>Forgot PIN?</Text>
-          </TouchableOpacity>
         </View>
       </View>
     </SafeAreaView>
@@ -292,15 +288,6 @@ const styles = StyleSheet.create({
     fontWeight: "300",
     color: "#1C1C1E",
   },
-  forgotButton: {
-    marginTop: 30,
-    alignItems: "center",
-  },
-  forgotText: {
-    fontSize: 16,
-    color: "#007AFF",
-    fontWeight: "500",
-  },
   errorContainer: {
     flex: 1,
     alignItems: "center",
@@ -319,6 +306,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 24,
     paddingVertical: 12,
+    marginTop: 16,
   },
   signupButtonText: {
     fontSize: 16,

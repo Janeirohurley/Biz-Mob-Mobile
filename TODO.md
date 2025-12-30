@@ -1,0 +1,5 @@
+- [x] Remove animations to ensure renderStepContent displays content immediately without issues
+- [x] Design the last step (Review & Confirm) professionally with icons and better layout
+- [x] Display currency and language labels instead of ids in the review step
+- [x] Increase illustration image size on each step for better visibility
+- [x] Test the signup flow to ensure content displays correctly
