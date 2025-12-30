@@ -39,7 +39,7 @@ jobs:
 
       # 4️⃣ Install JS dependencies
       - name: Install dependencies
-        run: npm install
+        run: npm install -f
 
       # 5️⃣ Prebuild Expo
       - name: Prebuild Expo
