@@ -3,6 +3,7 @@ import { Stack, useRouter, useSegments } from "expo-router";
 import React, { useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BusinessProvider, useBusiness } from "../context/BusinessContext";
+import { useUpdateCheck } from "../utils/useUpdateCheck";
 import { styles } from "./add-product";
 
 const RootNavigation = () => {
@@ -10,6 +11,9 @@ const RootNavigation = () => {
   const router = useRouter();
   const segments = useSegments();
   const [isReady, setIsReady] = React.useState(false);
+
+  // ✅ Vérification automatique de mise à jour (silencieuse, 3s après le lancement)
+  useUpdateCheck({ checkOnMount: true, delayMs: 3000 });
 
   useEffect(() => {
     // Petit délai pour s'assurer que le BusinessContext a chargé les données

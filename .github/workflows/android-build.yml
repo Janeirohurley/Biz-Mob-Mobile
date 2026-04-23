@@ -1,13 +1,17 @@
-name: Build Android APK
+name: Build Android APK & Release
 
 on:
   push:
     tags:
-      - "v*"   # Crée une release quand tu push un tag comme v1.0.0, v1.1.0, etc.
+      - "v*"   # Déclenche sur push de tag ex: v1.3.0
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Version à releaser (ex: 1.3.0)"
+        required: false
 
 permissions:
-  contents: write  # nécessaire pour créer et modifier des releases
+  contents: write  # Nécessaire pour créer et uploader des releases
 
 jobs:
   build-android:
@@ -20,17 +24,17 @@ jobs:
     steps:
       # 1️⃣ Checkout repository
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # 2️⃣ Setup Node.js
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 20
 
       # 3️⃣ Cache node_modules
       - name: Cache node_modules
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.npm
           key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
@@ -41,84 +45,125 @@ jobs:
       - name: Install dependencies
         run: npm install -f
 
-      # 5️⃣ Prebuild Expo
+      # 5️⃣ Extraire la version depuis package.json
+      - name: Extract app version
+        id: version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "APP_VERSION=$VERSION" >> $GITHUB_ENV
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Building version: $VERSION"
+
+      # 6️⃣ Prebuild Expo (génère le dossier android/)
       - name: Prebuild Expo
         run: npm run prebuild
 
-      # 6️⃣ Setup Java 17
+      # 7️⃣ Setup Java 17
       - name: Setup Java 17
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
 
-      # 7️⃣ Check Java version
-      - name: Check Java
-        run: |
-          echo "JAVA_HOME=$JAVA_HOME"
-          java -version
-
       # 8️⃣ Cache Android SDK
       - name: Cache Android SDK
-        uses: actions/cache@v3
+        id: cache-sdk
+        uses: actions/cache@v4
         with:
           path: ${{ env.ANDROID_HOME }}
-          key: ${{ runner.os }}-android-sdk
+          key: ${{ runner.os }}-android-sdk-35
 
       # 9️⃣ Setup Android SDK (si cache vide)
       - name: Setup Android SDK
-        if: steps.cache.outputs.cache-hit != 'true'
+        if: steps.cache-sdk.outputs.cache-hit != 'true'
         run: |
-          sudo apt-get update
+          sudo apt-get update -qq
           sudo apt-get install -y wget unzip
           mkdir -p $ANDROID_HOME/cmdline-tools
-          wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
-          unzip cmdline-tools.zip -d $ANDROID_HOME/cmdline-tools
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
+          unzip -q cmdline-tools.zip -d $ANDROID_HOME/cmdline-tools
           mv $ANDROID_HOME/cmdline-tools/cmdline-tools $ANDROID_HOME/cmdline-tools/latest
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME \
+            "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
       # 🔟 Créer local.properties pour Gradle
       - name: Create local.properties
         run: echo "sdk.dir=$ANDROID_HOME" > android/local.properties
 
-      # 1️⃣1️⃣ Build Release APKs
+      # 1️⃣1️⃣ Injecter la version dans build.gradle
+      - name: Inject version into build.gradle
+        run: |
+          VERSION="${{ env.APP_VERSION }}"
+          # Calculer versionCode depuis la version (ex: 1.3.0 → 10300)
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
+          VERSION_CODE=$(( MAJOR * 10000 + MINOR * 100 + PATCH ))
+          echo "🔢 versionCode: $VERSION_CODE | versionName: $VERSION"
+          sed -i "s/versionCode [0-9]*/versionCode $VERSION_CODE/" android/app/build.gradle
+          sed -i "s/versionName \"[^\"]*\"/versionName \"$VERSION\"/" android/app/build.gradle
+
+      # 1️⃣2️⃣ Build Release APKs
       - name: Build Release APKs
         run: |
           cd android
           chmod +x ./gradlew
-          ./gradlew clean assembleRelease
+          ./gradlew clean assembleRelease --no-daemon
 
-      # 1️⃣2️⃣ Create GitHub Release
-      - name: Create Release
+      # 1️⃣3️⃣ Renommer l'APK universel avec la version
+      - name: Rename APKs
+        run: |
+          APK_DIR="android/app/build/outputs/apk/release"
+          ls -la $APK_DIR
+          for apk in $APK_DIR/*.apk; do
+            FNAME=$(basename "$apk")
+            # Ajouter la version dans le nom si pas déjà présent
+            NEW_NAME="${FNAME%.apk}-v${{ env.APP_VERSION }}.apk"
+            mv "$apk" "$APK_DIR/$NEW_NAME" && echo "✅ Renamed to $NEW_NAME"
+          done
+
+      # 1️⃣4️⃣ Générer version.json (utilisé par l'app pour la détection de mise à jour)
+      - name: Generate version.json
+        run: |
+          APK_DIR="android/app/build/outputs/apk/release"
+          # Trouver l'APK universel ou le premier APK disponible
+          UNIVERSAL_APK=$(ls $APK_DIR | grep universal | head -1 || ls $APK_DIR | grep ".apk" | head -1)
+          TAG="${{ github.ref_name }}"
+          VERSION="${{ env.APP_VERSION }}"
+
+          cat > version.json << EOF
+          {
+            "version": "$VERSION",
+            "tag": "$TAG",
+            "apkName": "$UNIVERSAL_APK",
+            "releaseUrl": "https://github.com/${{ github.repository }}/releases/tag/$TAG",
+            "publishedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          EOF
+          echo "📄 Generated version.json:"
+          cat version.json
+
+      # 1️⃣5️⃣ Créer la GitHub Release
+      - name: Create GitHub Release
         id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          release_name: "Release ${{ github.ref_name }}"
+          name: "🚀 BizMob v${{ env.APP_VERSION }}"
+          body: |
+            ## 📦 BizMob v${{ env.APP_VERSION }}
+
+            ### 📥 Installation
+            1. Télécharge le fichier `.apk` ci-dessous
+            2. Sur ton téléphone Android, autorise l'installation depuis source inconnue si demandé
+            3. Ouvre le fichier APK pour l'installer
+
+            > ⚡ L'application détecte automatiquement les nouvelles versions et te propose de les télécharger.
+
+            ---
+            *Release générée automatiquement par GitHub Actions*
           draft: false
           prerelease: false
-
-      # 1️⃣3️⃣ Upload all APKs from release folder
-      - name: Upload APKs
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const fs = require("fs");
-            const path = require("path");
-            const uploadUrl = "${{ steps.create_release.outputs.upload_url }}";
-            const dir = "android/app/build/outputs/apk/release";
-            const files = fs.readdirSync(dir).filter(f => f.endsWith(".apk"));
-
-            for (const file of files) {
-              const filePath = path.join(dir, file);
-              console.log(`Uploading ${filePath}...`);
-              await github.rest.repos.uploadReleaseAsset({
-                url: uploadUrl,
-                headers: { "content-type": "application/vnd.android.package-archive" },
-                name: file,
-                data: fs.readFileSync(filePath)
-              });
-            }
+          files: |
+            android/app/build/outputs/apk/release/*.apk
+            version.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

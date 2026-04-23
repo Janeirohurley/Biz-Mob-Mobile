@@ -1,11 +1,14 @@
 import Header from "@/components/header";
 import { SettingItem } from "@/components/SettingItem";
-import axios from "axios"; // Ajout de axios pour les requêtes HTTP
+import SyncUrlModal from "@/components/SyncUrlModal";
+import { BackupData } from "@/types/business";
+import axios from "axios";
 import * as Crypto from "expo-crypto";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
+import { useUpdateCheck } from "../utils/useUpdateCheck";
 import {
   ActivityIndicator,
   Alert,
@@ -19,9 +22,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useBusiness } from "../context/BusinessContext";
-import { version, name } from "../package.json";
-import { BackupData } from "@/types/business";
-import SyncUrlModal from "@/components/SyncUrlModal";
+import { name, version } from "../package.json";
 
 export default function Settings() {
   const { config, resetApp, logout, updateConfig, importData, clients, sales, debts, products, auditLogs, setClients, setSales, setAuditLogs, setDebts, setPurchases, setProducts, purchases } = useBusiness();
@@ -35,6 +36,11 @@ export default function Settings() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isSyncing, setIsSyncing] = useState(false); // Indicateur de synchronisation
   const [modalVisibleUrl, setModalVisibleUrl] = useState(false);
+
+  // 🔄 Mise à jour automatique
+  const { isChecking: isCheckingUpdate, checkNow: checkForUpdate } = useUpdateCheck({
+    checkOnMount: false, // Déjà géré dans _layout.tsx
+  });
 
 
   const handleOpenModal = () => setModalVisibleUrl(true);
@@ -362,6 +368,18 @@ export default function Settings() {
         {/* Support Section */}
         <View style={styles.section}>
           <SettingItem
+            icon="refresh"
+            title="Check for Updates"
+            subtitle={
+              isCheckingUpdate
+                ? "Checking..."
+                : `Current version: v${version}`
+            }
+            onPress={checkForUpdate}
+            color="#30D158"
+            disabled={isCheckingUpdate}
+          />
+          <SettingItem
             icon="help-circle"
             title="Help & Support"
             subtitle="Get assistance"
@@ -606,7 +624,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     backgroundColor: "#F2F2F7",
-    borderRadius: 16,
+    borderRadius: 10,
   },
   editText: {
     fontSize: 15,
