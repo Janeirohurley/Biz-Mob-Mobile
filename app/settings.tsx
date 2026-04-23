@@ -8,7 +8,6 @@ import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { useUpdateCheck } from "../utils/useUpdateCheck";
 import {
   ActivityIndicator,
   Alert,
@@ -23,6 +22,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useBusiness } from "../context/BusinessContext";
 import { name, version } from "../package.json";
+import { useUpdateCheck } from "../utils/useUpdateCheck";
 
 export default function Settings() {
   const { config, resetApp, logout, updateConfig, importData, clients, sales, debts, products, auditLogs, setClients, setSales, setAuditLogs, setDebts, setPurchases, setProducts, purchases } = useBusiness();
@@ -444,7 +444,7 @@ export default function Settings() {
             Made with ❤️ for small businesses
           </Text>
           <Text style={styles.versionText}>
-            BizMob v1.0.0
+            {name} v{version}
           </Text>
         </View>
       </ScrollView>

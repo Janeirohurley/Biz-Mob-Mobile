@@ -11,7 +11,8 @@
     "lint": "expo lint",
     "prebuild": "expo prebuild",
     "prebuild:android": "expo prebuild && expo run:android",
-    "prebuild:ios": "expo prebuild && expo run:ios"
+    "prebuild:ios": "expo prebuild && expo run:ios",
+    "release": "commit-and-tag-version"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
@@ -55,6 +56,7 @@
     "@babel/core": "^7.25.2",
     "@types/react": "~19.1.10",
     "@types/react-native": "^0.72.8",
+    "commit-and-tag-version": "^12.5.0",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~10.0.0",
     "glob": "^11.0.3",
