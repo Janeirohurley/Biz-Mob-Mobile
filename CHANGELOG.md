@@ -1,10 +1,15 @@
 # Changelog
 
-Toutes les modifications notables de ce projet seront documentées dans ce fichier.  
-Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)  
-et ce projet respecte [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
----
+## [1.4.0](https://github.com/Janeirohurley/Biz-Mob-Mobile/compare/v1.3.0...v1.4.0) (2026-04-23)
+
+
+### Features
+
+* add settings page with data synchronization and export functionality, and include commit-and-tag-version for release management ([3722beb](https://github.com/Janeirohurley/Biz-Mob-Mobile/commit/3722beb6c9133b5b7b677a5115d7878a5c613ac6))
+* GitHub Release CI + auto-update detection in app ([9ff690d](https://github.com/Janeirohurley/Biz-Mob-Mobile/commit/9ff690dc71649e4555530894b38b354759d3f8ab))
+* initialize Android project configuration with manifest, styles, and gradle properties ([e178102](https://github.com/Janeirohurley/Biz-Mob-Mobile/commit/e17810262b712d1d3af08ec58ecbb57a2691bd85))
 
 ## [1.1.0] - 2025-09-11
 
